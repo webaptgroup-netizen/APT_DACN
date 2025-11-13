@@ -1,5 +1,41 @@
 # APT-CONNECT (PHQ-TECH)
 
+> **2025 update**: Repository nay da kem backend Node.js + Supabase (`src/**/*`) de thay the ASP.NET Core neu ban muon rewrite. Tai lieu goc van duoc giu lai ben duoi.
+
+### Node.js + Supabase rewrite snapshot
+- Stack: **Express + TypeScript** tach module (auth, chung cu, can ho, cu dan, dich vu, hoa don, tin tuc, phan anh, chatbot).
+- Database: **Supabase Postgres** voi cac bang giu nguyen ten `ChungCus`, `CanHos`, `NguoiDungs`, `CuDans`, `DichVus`, `HoaDonDichVus`, `HoaDonDichVu_DichVus`, `TinTucs`, `PhanAnhs`. Import seed trong phu luc hoac dung file `QLCC.sql`.
+- Auth: JWT + bcrypt, role `Khach` -> `Cu dan` -> `Ban quan ly` nhu tai lieu goc.
+- Media: Toan bo anh/chung minh duoc day len **Supabase Storage** (bucket `SUPABASE_STORAGE_BUCKET`) qua API `/api/storage/upload`, nhan URL cong khai roi luu vao cac truong `HinhAnh*`, `URLs`, ...
+- Front-end: Thu muc `client/` (Vite + React + TypeScript) cung cap giao dien BQL/cư dan, goi cac endpoint Node.js va ho tro upload anh, chatbot, dang ky dich vu, quan ly hoa don...
+- Chạy UI mới:
+  ```bash
+  cd client
+  npm install
+  npm run dev # http://localhost:5173
+  ```
+- Webhook/AI: module tin tuc goi POST toi `N8N_WEBHOOK_URL`, chatbot dung OpenAI (`OPENAI_API_KEY`) hoac fallback neu chua cau hinh.
+- Cau hinh: tao file `.env` tu `.env.example`, dien Supabase/SMTP/OpenAI -> `npm install` -> `npm run dev`.
+- API prefix `/api`: xem `src/routes/index.ts` de biet danh sach route (auth, buildings, apartments, residents, services, invoices, news, complaints, chatbot/ask).
+
+#### Supabase Storage setup
+1. Trong Supabase Dashboard -> Storage tao bucket public co ten trung voi bien `SUPABASE_STORAGE_BUCKET`.
+2. Backend chi luu **public URL** vao cac truong `HinhAnh*`, `URLs`, ... nen hay upload file truoc qua API:
+   ```http
+   POST /api/storage/upload
+   Authorization: Bearer <token>
+   Content-Type: application/json
+
+   {
+     "base64": "data:image/png;base64,iVBORw0KGgoAAA...",
+     "folder": "buildings",
+     "fileName": "mat-tien.png"
+   }
+   ```
+   Response: `{ "path": "buildings/mat-tien-<timestamp>.png", "url": "https://your-project.supabase.co/storage/v1/object/public/..." }`.
+3. Khi khong can nua (vd xoa tin tuc), admin co the goi `DELETE /api/storage/file` voi body `{ "path": "<duong-dan>" }` (chi role `Ban quan ly`).
+
+
 Tài liệu này mô tả toàn bộ chức năng, cấu trúc và các luồng nghiệp vụ của hệ thống **APT-CONNECT** – nền tảng quản lý cư dân & trải nghiệm chung cư được phát triển trên ASP.NET Core. Nội dung nhằm giúp bạn có thể tái triển khai hệ thống bằng ngôn ngữ lập trình khác mà vẫn giữ nguyên hành vi và tích hợp hiện tại.
 
 ## Mục lục
@@ -38,10 +74,11 @@ Tài liệu này mô tả toàn bộ chức năng, cấu trúc và các luồng 
 | Web & MVC | ASP.NET Core 9.0, Razor Views, Bootstrap/CSS tùy chỉnh | Cookie Authentication với Claims (`UserId`, `Role`, `Email`). |
 | Data access | Entity Framework Core 9 + SQL Server | Migration sẵn, kèm file `QLCC.sql` seed thủ công. |
 | Repository layer | Repository pattern cho Chung cư, Căn hộ, Cư dân, Dịch vụ, Tin tức, Hóa đơn, Phản ánh, Người dùng | Giúp tách logic khỏi Controller. |
-| Services | `EmailService` (SMTP Gmail), `OpenAIService` (chat GPT), `IHttpClientFactory` cho imgbb/n8n | Weather ViewComponent gọi OpenWeather API trực tiếp. |
+| Services | `EmailService` (SMTP Gmail), `OpenAIService` (chat GPT), `IHttpClientFactory` cho imgbb/n8n | Weather ViewComponent goi OpenWeather API truc tiep. |
+  2. ASP.NET: upload song song len imgbb (API key). Node.js: khong can imgbb vi da co Supabase Storage; co the tiep tuc sync toi he thong ngoai neu muon.
 | AI/Chatbot | Google Dialogflow V2 (qua `SessionsClient`), tùy chọn bypass để dùng parser nội bộ; bộ script Node/Python để huấn luyện intents | Chatbot phản hồi JSON qua `POST /api/ChatBot`. |
 | Front-end realtime | SignalR `ChatHub` (dùng `OpenAIService`) – hiện ở trạng thái prototype, cần đăng ký DI nếu dùng. |
-| Tài nguyên tĩnh | `wwwroot/images`, `wwwroot/uploads/phananh`, CSS dài trong `wwwroot/css/site.css`, favicon, JS placeholder. |
+- Cu dan gui phan anh (Authorize), dinh kem hinh anh file hoac duong dan. Ban ASP.NET luu file tai `wwwroot/uploads/phananh`; ban Node.js upload len Supabase Storage va luu URL trong truong `HinhAnh`.
 
 <a id="3"></a>
 
@@ -68,8 +105,8 @@ Tài liệu này mô tả toàn bộ chức năng, cấu trúc và các luồng 
 - `NguoiDungController` cung cấp CRUD, hạn chế hạ role từ “Ban quản lý” xuống role thấp hơn.
 
 ### 4.2. Quản lý toà nhà & căn hộ (`ChungCuController`, `CanHoController`, `Repositories/*`)
-- Chung cư: CRUD, đính kèm nhiều ảnh (`HinhAnhChungCu`). Ảnh lưu tại `wwwroot/images`.
-- Căn hộ: CRUD + upload nhiều ảnh (`HinhAnhCanHo`) với giới hạn 5 MB, chỉ nhận MIME `image/*`. Thuộc tính `URLs` lưu dạng JSON trong cột `URLs`.
+- Chung cu: CRUD, dinh kem nhieu anh (`HinhAnhChungCu`). Ban ASP.NET luu file tai `wwwroot/images`, ban Node.js upload len Supabase Storage (`/storage/upload`) va luu public URL.
+- Can ho: CRUD + upload nhieu anh (`HinhAnhCanHo`) voi gioi han 5 MB, chi nhan MIME `image/*`. Thuoc tinh `URLs` luu JSON cac public URL (tu Supabase Storage trong ban Node.js).
 - Ràng buộc nghiệp vụ:
   - `CanHo.MaCan` unique theo `ID_ChungCu`.
   - `CanHo.TrangThai` chỉ thuộc `{Dang bán, Da bán, Cho thuê, Da thuê}` (check constraint).
@@ -101,14 +138,14 @@ Tài liệu này mô tả toàn bộ chức năng, cấu trúc và các luồng 
 ### 4.5. Tin tức & truyền thông (`TinTucController`)
 - CRUD nội dung + ảnh.
 - Quy trình tạo:
-  1. Upload ảnh vào `wwwroot/images`.
-  2. Upload song song lên imgbb (API key lấy từ `TinTucController` – hiện hardcode).
+  1. ASP.NET: upload anh vao `wwwroot/images`. Node.js: goi `/api/storage/upload` de lay public URL tu Supabase Storage.
+  2. ASP.NET: upload song song len imgbb (API key). Node.js: khong can imgbb vi da co Supabase Storage; co the tiep tuc sync toi he thong ngoai neu muon.
   3. Lưu DB (đường dẫn local).
   4. Gửi webhook tới n8n (`appsettings:N8n:WebhookUrl`) để phát hành thông báo realtime (Zalo/Email/Push tuỳ n8n).
 - Khi chỉnh sửa/xóa sẽ quản lý lại ảnh cũ.
 
 ### 4.6. Quản lý phản ánh (`PhanAnhController`)
-- Cư dân gửi phản ánh (Authorize), đính kèm hình ảnh file hoặc đường dẫn. File lưu tại `wwwroot/uploads/phananh`.
+- Cu dan gui phan anh (Authorize), dinh kem hinh anh file hoac duong dan. Ban ASP.NET luu file tai `wwwroot/uploads/phananh`; ban Node.js upload len Supabase Storage va luu URL trong truong `HinhAnh`.
 - Khi tạo:
   - Tự gắn `ID_NguoiDung` từ claim.
   - Gửi email HTML tới ban quản lý với thông tin cư dân, căn hộ, nội dung.
@@ -150,7 +187,7 @@ Tài liệu này mô tả toàn bộ chức năng, cấu trúc và các luồng 
 4. **Xử lý phản ánh**
    - Cư dân gửi phản ánh + ảnh → email tới quản lý → quản lý phản hồi → email trả khách.
 5. **Xuất bản tin tức**
-   - Admin tạo tin → upload ảnh local + imgbb → lưu DB → webhook n8n (ví dụ đẩy sang Zalo OA, Telegram, Slack...).
+  2. ASP.NET: upload song song len imgbb (API key). Node.js: khong can imgbb vi da co Supabase Storage; co the tiep tuc sync toi he thong ngoai neu muon.
 6. **Chatbot hỗ trợ**
    - Người dùng mở widget (ChatBox) → gõ câu hỏi → `ChatBotController` đánh giá role + intent → lấy dữ liệu trực tiếp từ DbContext (không cache) → trả reply + gợi ý.
 
@@ -370,7 +407,7 @@ INSERT INTO TinTucs (TieuDe, NoiDung, NgayDang, HinhAnh) VALUES
 | **SMTP (Gmail)** | `EmailSettings` (appsettings) | Dùng App Password (`SmtpPass`). Tất cả email (quên mật khẩu, đăng ký dịch vụ, phản ánh) gọi `EmailService`. |
 | **Dialogflow** | `appsettings:Dialogflow` (`ProjectId`, `JsonCredentialsPath`, `Bypass`) + file service account (`apartmentchatbot-458712-*.json`) | Nếu `Bypass=true` sẽ dùng parser nội bộ. |
 | **OpenWeather** | Hardcode trong `ViewComponents/WeatherViewComponent.cs` (`api.openweathermap.org`, key `96e280...`) | Nên đưa vào cấu hình khi rewrite. |
-| **imgbb** | API key `1dad6dd4...` hardcode trong `TinTucController`. |
+  2. ASP.NET: upload song song len imgbb (API key). Node.js: khong can imgbb vi da co Supabase Storage; co the tiep tuc sync toi he thong ngoai neu muon.
 | **n8n webhook** | `appsettings:N8n:WebhookUrl` (ví dụ `https://n8n.vtcmobile.vn/...`). |
 | **OpenAI** | `OpenAIService` yêu cầu API key khi khởi tạo (chưa được inject). |
 | **Node server (Dialogflow proxy)** | `scripts/server.js`, chạy bằng `npm start`. |
@@ -412,7 +449,7 @@ PHQ-TECH/
 ## 10. Thiết lập & vận hành
 1. **Yêu cầu môi trường**
    - .NET SDK 9.0, Node.js 20+, Python 3.10+, SQL Server 2019+, Git.
-   - Tài khoản Google Cloud (Dialogflow), Gmail SMTP, imgbb, OpenWeather, n8n webhook URL, OpenAI key (nếu dùng ChatHub).
+  2. ASP.NET: upload song song len imgbb (API key). Node.js: khong can imgbb vi da co Supabase Storage; co the tiep tuc sync toi he thong ngoai neu muon.
 2. **Cấu hình**
    - Sao chép `appsettings.json` và cập nhật ConnectionString, EmailSettings, Dialogflow, N8n.
    - Đảm bảo file service account `apartmentchatbot-458712-*.json` đúng đường dẫn (`scripts/...`).
@@ -442,7 +479,7 @@ PHQ-TECH/
   - Một căn hộ chỉ có một `ChuHo`.
   - Cư dân bị xóa phải hạ role người dùng xuống “Khách”.
 - **Luồng email**: Quên mật khẩu, đổi mật khẩu, đăng ký dịch vụ, phản ánh (cả hai chiều) – đều gửi HTML theo template. Đảm bảo không mất thông báo này.
-- **Lưu trữ file**: Hình ảnh căn hộ/chung cư/dịch vụ nằm ở `/wwwroot/images`, phản ánh ở `/wwwroot/uploads/phananh`. Khi rewrite cần cung cấp cơ chế upload, lưu đường dẫn tương đối và xóa file vật lý khi cần.
+  1. ASP.NET: upload anh vao `wwwroot/images`. Node.js: goi `/api/storage/upload` de lay public URL tu Supabase Storage.
 - **Chatbot**: Phải giữ được ba nhóm intent (General / Resident / Admin) và cơ chế gợi ý `options`. Dù dùng công nghệ khác, vẫn cần caching tên chung cư theo session để trả lời câu “chung cư này”.
 - **Webhook & tích hợp**: Tin tức cần tiếp tục bắn webhook; chatbot scripts cần được hỗ trợ (hoặc thay thế tương đương).
 - **Logging**: Hệ thống dựa nhiều vào `ILogger`. Khi chuyển ngôn ngữ khác nên tiếp tục log intents, lỗi email, Parser... để dễ vận hành.
@@ -458,7 +495,7 @@ PHQ-TECH/
   - Upload ảnh (chung cư, căn hộ, dịch vụ) → kiểm tra file vật lý.
   - Quy trình phản ánh: tạo → email quản lý → phản hồi → email cư dân.
   - Đăng ký dịch vụ → kiểm tra hóa đơn + email.
-  - Tin tức → kiểm tra webhook n8n nhận payload với URL ảnh imgbb.
+  2. ASP.NET: upload song song len imgbb (API key). Node.js: khong can imgbb vi da co Supabase Storage; co the tiep tuc sync toi he thong ngoai neu muon.
   - Chatbot: thử câu hỏi thuộc cả 3 nhóm, kiểm tra `options`.
 - **Giám sát**:
   - Sử dụng Console logger mặc định hoặc kết nối Application Insights/ELK.

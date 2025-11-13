@@ -1,0 +1,54 @@
+{
+  "name": "apt_dacn",
+  "version": "1.0.0",
+  "description": "Tài liệu này mô tả toàn bộ chức năng, cấu trúc và các luồng nghiệp vụ của hệ thống **APT-CONNECT** – nền tảng quản lý cư dân & trải nghiệm chung cư được phát triển trên ASP.NET Core. Nội dung nhằm giúp bạn có thể tái triển khai hệ thống bằng ngôn ngữ lập trình khác mà vẫn giữ nguyên hành vi và tích hợp hiện tại.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webaptgroup-netizen/APT_DACN.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/webaptgroup-netizen/APT_DACN/issues"
+  },
+  "homepage": "https://github.com/webaptgroup-netizen/APT_DACN#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.81.0",
+    "axios": "^1.13.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.19",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.10",
+    "openai": "^6.8.1",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/helmet": "^0.0.48",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.0",
+    "@types/nodemailer": "^7.0.3",
+    "@types/uuid": "^10.0.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}
