@@ -49,14 +49,7 @@ const BuildingsPage = () => {
   const openModal = (record?: Building) => {
     if (record) {
       setEditing(record);
-      form.setFieldsValue({
-        Ten: record.Ten,
-        DiaChi: record.DiaChi,
-        ChuDauTu: record.ChuDauTu,
-        NamXayDung: record.NamXayDung,
-        SoTang: record.SoTang,
-        MoTa: record.MoTa
-      });
+      form.setFieldsValue(record);
     } else {
       setEditing(null);
       form.resetFields();
@@ -100,13 +93,13 @@ const BuildingsPage = () => {
         title: 'Năm hoàn thành',
         dataIndex: 'NamXayDung',
         key: 'NamXayDung',
-        render: (val?: number) => (val ? <Tag color="blue">{val}</Tag> : '-')
+        render: (val?: number) => (val ? <Tag color="magenta">{val}</Tag> : '-')
       },
       {
         title: 'Số tầng',
         dataIndex: 'SoTang',
         key: 'SoTang',
-        render: (val?: number) => (val ? <Tag>{val}</Tag> : '-')
+        render: (val?: number) => (val ? <Tag color="cyan">{val} tầng</Tag> : '-')
       }
     ];
     if (isManager) {
@@ -152,12 +145,23 @@ const BuildingsPage = () => {
       <Row gutter={[16, 16]}>
         {data.map((building) => (
           <Col xs={24} md={12} xl={8} key={building.ID}>
-            <Card style={{ borderRadius: 20, height: '100%' }} title={building.Ten}>
+            <Card
+              title={building.Ten}
+              hoverable
+              style={{
+                borderRadius: 20,
+                height: '100%',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                transition: '0.3s',
+                background: 'linear-gradient(135deg, #fef6f0, #fff0f5)'
+              }}
+              headStyle={{ fontWeight: 600 }}
+            >
               <Typography.Paragraph type="secondary">{building.DiaChi}</Typography.Paragraph>
               <Space size="small" wrap>
-                {building.NamXayDung && <Tag color="blue">{building.NamXayDung}</Tag>}
-                {building.SoTang && <Tag>{building.SoTang} tầng</Tag>}
-                {building.ChuDauTu && <Tag color="purple">{building.ChuDauTu}</Tag>}
+                {building.NamXayDung && <Tag color="magenta">{building.NamXayDung}</Tag>}
+                {building.SoTang && <Tag color="cyan">{building.SoTang} tầng</Tag>}
+                {building.ChuDauTu && <Tag color="volcano">{building.ChuDauTu}</Tag>}
               </Space>
               {building.MoTa && (
                 <Typography.Paragraph style={{ marginTop: 12 }}>{building.MoTa}</Typography.Paragraph>
@@ -169,48 +173,37 @@ const BuildingsPage = () => {
     );
   };
 
-  if (!isManager) {
-    return (
-      <Space direction="vertical" size={24} style={{ width: '100%' }}>
-        <div className="page-header">
-          <div>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              Danh sách chung cư
-            </Typography.Title>
-            <Typography.Text type="secondary">
-              Xem nhanh thông tin dự án, vị trí và tiện ích để lựa chọn nơi ở phù hợp.
-            </Typography.Text>
-          </div>
-        </div>
-        {renderResidentView()}
-      </Space>
-    );
-  }
-
   return (
-    <>
-      <div className="page-header">
+    <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
             Danh sách chung cư
           </Typography.Title>
-          <Typography.Text type="secondary">Quản lý dự án, tòa nhà và thông tin chung</Typography.Text>
+          <Typography.Text type="secondary">
+            {isManager ? 'Quản lý dự án, tòa nhà và thông tin chung' : 'Xem nhanh thông tin dự án, vị trí và tiện ích để lựa chọn nơi ở phù hợp.'}
+          </Typography.Text>
         </div>
         {isManager && (
-          <Button type="primary" onClick={() => openModal()}>
+          <Button type="primary" style={{ background: '#ff7f50', borderColor: '#ff7f50', fontWeight: 600 }} onClick={() => openModal()}>
             Thêm chung cư
           </Button>
         )}
       </div>
 
-      <Table
-        rowKey="ID"
-        loading={loading}
-        dataSource={data}
-        columns={columns}
-        bordered
-        scroll={{ x: 900 }}
-      />
+      {isManager ? (
+        <Table
+          rowKey="ID"
+          loading={loading}
+          dataSource={data}
+          columns={columns}
+          bordered
+          scroll={{ x: 900 }}
+          style={{ borderRadius: 20 }}
+        />
+      ) : (
+        renderResidentView()
+      )}
 
       <Modal
         title={editing ? 'Chỉnh sửa chung cư' : 'Thêm chung cư'}
@@ -218,6 +211,7 @@ const BuildingsPage = () => {
         onCancel={() => setModalOpen(false)}
         onOk={handleSubmit}
         okText="Lưu"
+        okButtonProps={{ style: { background: '#2563eb', borderColor: '#2563eb' } }}
       >
         <Form layout="vertical" form={form}>
           <Form.Item label="Tên" name="Ten" rules={[{ required: true, message: 'Nhập tên chung cư' }]}>
@@ -240,8 +234,9 @@ const BuildingsPage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </>
+    </Space>
   );
 };
 
 export default BuildingsPage;
+

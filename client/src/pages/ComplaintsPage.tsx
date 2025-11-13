@@ -1,5 +1,6 @@
-import { App as AntdApp, Button, Card, Form, Input, List, Select, Space, Tag, Upload } from 'antd';
+import { App as AntdApp, Button, Card, Form, Input, List, Select, Space, Tag, Upload, Avatar, Badge, Tooltip } from 'antd';
 import type { UploadProps } from 'antd';
+import { FileImageOutlined, SendOutlined, ClockCircleOutlined, CheckCircleOutlined, SyncOutlined, MessageOutlined, UserOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import api from '../api/client';
@@ -7,14 +8,15 @@ import type { Complaint } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
 
 const statusOptions = [
-  { label: 'Chưa xử lý', value: 'Chua xu ly', color: 'red' },
-  { label: 'Đang xử lý', value: 'Dang xu ly', color: 'orange' },
-  { label: 'Đã xử lý', value: 'Da xu ly', color: 'green' }
+  { label: 'Chưa xử lý', value: 'Chua xu ly', color: '#ff4d4f', icon: <ClockCircleOutlined /> },
+  { label: 'Đang xử lý', value: 'Dang xu ly', color: '#faad14', icon: <SyncOutlined spin /> },
+  { label: 'Đã xử lý', value: 'Da xu ly', color: '#52c41a', icon: <CheckCircleOutlined /> }
 ];
 
 const ComplaintsPage = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>('');
   const [form] = Form.useForm();
   const { user } = useAuthStore();
   const { message } = AntdApp.useApp();
@@ -36,14 +38,15 @@ const ComplaintsPage = () => {
 
   const handleSubmit = async (values: { NoiDung: string; HinhAnh?: string }) => {
     await api.post('/complaints', values);
-    message.success('Đã gửi phản ánh');
+    message.success('Đã gửi phản ánh thành công! 🎉');
     form.resetFields();
+    setImageUrl('');
     await loadComplaints();
   };
 
   const handleUpdate = async (item: Complaint, payload: Partial<Complaint>) => {
     await api.patch(`/complaints/${item.ID}`, payload);
-    message.success('Đã cập nhật phản ánh');
+    message.success('Đã cập nhật phản ánh! ✅');
     await loadComplaints();
   };
 
@@ -65,96 +68,371 @@ const ComplaintsPage = () => {
         fileName: file.name
       });
       form.setFieldsValue({ HinhAnh: data.url });
-      message.success('Đã tải ảnh');
+      setImageUrl(data.url);
+      message.success('Đã tải ảnh lên thành công! 📸');
       return false;
     }
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
-      {user && (
-        <Card title="Gửi phản ánh" variant="borderless">
-          <Form layout="vertical" form={form} onFinish={handleSubmit}>
-            <Form.Item label="Nội dung" name="NoiDung" rules={[{ required: true, message: 'Nhập nội dung phản ánh' }]}>
-              <Input.TextArea rows={4} placeholder="Mô tả sự cố bạn gặp phải..." />
-            </Form.Item>
-            <Form.Item label="Ảnh minh chứng" name="HinhAnh">
-              <Input placeholder="URL ảnh" />
-            </Form.Item>
-            <Upload {...uploadProps}>
-              <Button type="dashed" style={{ marginBottom: 12 }}>
-                Tải ảnh lên Supabase
-              </Button>
-            </Upload>
-            <Button type="primary" htmlType="submit">
-              Gửi phản ánh
-            </Button>
-          </Form>
-        </Card>
-      )}
+    <div style={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '40px 20px'
+    }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <h1 style={{ 
+              color: 'white', 
+              fontSize: 42, 
+              fontWeight: 700,
+              marginBottom: 8,
+              textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
+            }}>
+              💬 Hệ Thống Phản Ánh
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 16 }}>
+              Gửi phản ánh và theo dõi tiến độ xử lý
+            </p>
+          </div>
 
-      <Card title="Danh sách phản ánh" variant="borderless">
-        <List
-          loading={loading}
-          dataSource={complaints}
-          renderItem={(item) => (
-            <List.Item
-              actions={
-                isManager
-                  ? [
-                      <Select
-                        key="status"
-                        options={statusOptions}
-                        value={item.TrangThai}
-                        style={{ width: 160 }}
-                        onChange={(value) => handleUpdate(item, { TrangThai: value as Complaint['TrangThai'] })}
-                      />,
-                      <Button
-                        key="reply"
-                        onClick={() => {
-                          const reply = window.prompt('Nhập phản hồi gửi cư dân', item.PhanHoi ?? '');
-                          if (reply) handleUpdate(item, { PhanHoi: reply, TrangThai: 'Da xu ly' });
-                        }}
-                      >
-                        Phản hồi
-                      </Button>
-                    ]
-                  : undefined
-              }
+          {/* Form gửi phản ánh */}
+          {user && (
+            <Card 
+              style={{ 
+                borderRadius: 20,
+                boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                border: 'none',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)'
+              }}
             >
-              <List.Item.Meta
-                title={
-                  <Space>
-                    <strong>{item.NguoiDungs?.HoTen ?? 'Ẩn danh'}</strong>
-                    <Tag color={statusOptions.find((s) => s.value === item.TrangThai)?.color}>
-                      {statusOptions.find((s) => s.value === item.TrangThai)?.label}
-                    </Tag>
-                  </Space>
-                }
-                description={dayjs(item.NgayGui).format('DD/MM/YYYY HH:mm')}
-              />
-              <div>
-                <p>{item.NoiDung}</p>
-                {item.HinhAnh && (
-                  <img src={item.HinhAnh} alt="Ảnh minh chứng" style={{ maxWidth: 200, borderRadius: 8, display: 'block', marginTop: 8 }} />
-                )}
-                {item.HinhAnh && (
-                  <a href={item.HinhAnh} target="_blank" rel="noreferrer">
-                    Xem ảnh
-                  </a>
-                )}
-                {item.PhanHoi && (
-                  <Card size="small" style={{ marginTop: 12, background: '#f6ffed' }}>
-                    <strong>Phản hồi:</strong>
-                    <p style={{ marginBottom: 0 }}>{item.PhanHoi}</p>
-                  </Card>
-                )}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                marginBottom: 24,
+                paddingBottom: 16,
+                borderBottom: '2px solid #f0f0f0'
+              }}>
+                <div style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 16
+                }}>
+                  <SendOutlined style={{ fontSize: 24, color: 'white' }} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Gửi Phản Ánh Mới</h2>
+                  <p style={{ margin: 0, color: '#8c8c8c' }}>Chia sẻ vấn đề bạn gặp phải</p>
+                </div>
               </div>
-            </List.Item>
+
+              <Form layout="vertical" form={form} onFinish={handleSubmit}>
+                <Form.Item 
+                  label={<span style={{ fontSize: 16, fontWeight: 500 }}>Nội dung phản ánh</span>}
+                  name="NoiDung" 
+                  rules={[{ required: true, message: 'Vui lòng nhập nội dung phản ánh' }]}
+                >
+                  <Input.TextArea 
+                    rows={5} 
+                    placeholder="Mô tả chi tiết sự cố hoặc vấn đề bạn gặp phải..."
+                    style={{ 
+                      borderRadius: 12,
+                      fontSize: 15,
+                      border: '2px solid #e8e8e8'
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item name="HinhAnh" hidden>
+                  <Input />
+                </Form.Item>
+
+                {imageUrl && (
+                  <div style={{ 
+                    marginBottom: 16,
+                    padding: 16,
+                    background: '#f6ffed',
+                    borderRadius: 12,
+                    border: '2px dashed #52c41a'
+                  }}>
+                    <img 
+                      src={imageUrl} 
+                      alt="Preview" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: 200, 
+                        borderRadius: 8,
+                        display: 'block',
+                        margin: '0 auto'
+                      }} 
+                    />
+                  </div>
+                )}
+
+                <Space size="middle">
+                  <Upload {...uploadProps}>
+                    <Button 
+                      icon={<PictureOutlined />}
+                      size="large"
+                      style={{
+                        borderRadius: 12,
+                        height: 48,
+                        paddingLeft: 24,
+                        paddingRight: 24,
+                        border: '2px dashed #d9d9d9',
+                        fontWeight: 500
+                      }}
+                    >
+                      Thêm Ảnh Minh Chứng
+                    </Button>
+                  </Upload>
+
+                  <Button 
+                    type="primary" 
+                    htmlType="submit"
+                    icon={<SendOutlined />}
+                    size="large"
+                    style={{
+                      borderRadius: 12,
+                      height: 48,
+                      paddingLeft: 32,
+                      paddingRight: 32,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: 16,
+                      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+                    }}
+                  >
+                    Gửi Phản Ánh
+                  </Button>
+                </Space>
+              </Form>
+            </Card>
           )}
-        />
-      </Card>
-    </Space>
+
+          {/* Danh sách phản ánh */}
+          <Card 
+            style={{ 
+              borderRadius: 20,
+              boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+              border: 'none',
+              background: 'white'
+            }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: 24,
+              paddingBottom: 16,
+              borderBottom: '2px solid #f0f0f0'
+            }}>
+              <div style={{
+                width: 50,
+                height: 50,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #fa8c16 0%, #faad14 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 16
+              }}>
+                <FileImageOutlined style={{ fontSize: 24, color: 'white' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Danh Sách Phản Ánh</h2>
+                <p style={{ margin: 0, color: '#8c8c8c' }}>
+                  <Badge count={complaints.length} style={{ backgroundColor: '#52c41a' }} />
+                  <span style={{ marginLeft: 8 }}>Tổng số phản ánh</span>
+                </p>
+              </div>
+            </div>
+
+            <List
+              loading={loading}
+              dataSource={complaints}
+              renderItem={(item) => {
+                const status = statusOptions.find((s) => s.value === item.TrangThai);
+                return (
+                  <List.Item
+                    style={{
+                      padding: 20,
+                      marginBottom: 16,
+                      background: 'linear-gradient(135deg, #fafafa 0%, #ffffff 100%)',
+                      borderRadius: 16,
+                      border: '2px solid #f0f0f0',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    actions={
+                      isManager
+                        ? [
+                            <Select
+                              key="status"
+                              options={statusOptions.map(s => ({
+                                ...s,
+                                label: (
+                                  <span>
+                                    {s.icon} {s.label}
+                                  </span>
+                                )
+                              }))}
+                              value={item.TrangThai}
+                              style={{ width: 180 }}
+                              size="large"
+                              onChange={(value) => handleUpdate(item, { TrangThai: value as Complaint['TrangThai'] })}
+                            />,
+                            <Button
+                              key="reply"
+                              type="primary"
+                              icon={<MessageOutlined />}
+                              style={{
+                                borderRadius: 8,
+                                background: 'linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%)',
+                                border: 'none'
+                              }}
+                              onClick={() => {
+                                const reply = window.prompt('Nhập phản hồi gửi cư dân', item.PhanHoi ?? '');
+                                if (reply) handleUpdate(item, { PhanHoi: reply, TrangThai: 'Da xu ly' });
+                              }}
+                            >
+                              Phản Hồi
+                            </Button>
+                          ]
+                        : undefined
+                    }
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar 
+                          size={56} 
+                          icon={<UserOutlined />}
+                          style={{ 
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            border: '3px solid white',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                          }}
+                        />
+                      }
+                      title={
+                        <Space size="middle">
+                          <strong style={{ fontSize: 18 }}>{item.NguoiDungs?.HoTen ?? 'Ẩn danh'}</strong>
+                          <Tag 
+                            icon={status?.icon}
+                            color={status?.color}
+                            style={{ 
+                              fontSize: 13,
+                              padding: '4px 12px',
+                              borderRadius: 20,
+                              fontWeight: 500
+                            }}
+                          >
+                            {status?.label}
+                          </Tag>
+                        </Space>
+                      }
+                      description={
+                        <Space style={{ color: '#8c8c8c', fontSize: 14 }}>
+                          <ClockCircleOutlined />
+                          {dayjs(item.NgayGui).format('DD/MM/YYYY • HH:mm')}
+                        </Space>
+                      }
+                    />
+                    <div style={{ marginTop: 16 }}>
+                      <p style={{ 
+                        fontSize: 15, 
+                        lineHeight: 1.6,
+                        color: '#262626',
+                        marginBottom: 12
+                      }}>
+                        {item.NoiDung}
+                      </p>
+                      
+                      {item.HinhAnh && (
+                        <div style={{ 
+                          marginTop: 16,
+                          padding: 12,
+                          background: '#f5f5f5',
+                          borderRadius: 12,
+                          display: 'inline-block'
+                        }}>
+                          <img 
+                            src={item.HinhAnh} 
+                            alt="Ảnh minh chứng" 
+                            style={{ 
+                              maxWidth: 300, 
+                              borderRadius: 8,
+                              display: 'block',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                            }} 
+                          />
+                          <a 
+                            href={item.HinhAnh} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{ 
+                              display: 'block',
+                              marginTop: 8,
+                              fontSize: 13,
+                              textAlign: 'center'
+                            }}
+                          >
+                            <FileImageOutlined /> Xem ảnh gốc
+                          </a>
+                        </div>
+                      )}
+                      
+                      {item.PhanHoi && (
+                        <Card 
+                          size="small" 
+                          style={{ 
+                            marginTop: 16,
+                            background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)',
+                            border: '2px solid #95de64',
+                            borderRadius: 12,
+                            boxShadow: '0 2px 8px rgba(82, 196, 26, 0.15)'
+                          }}
+                        >
+                          <Space direction="vertical" style={{ width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                              <MessageOutlined style={{ marginRight: 8, color: '#52c41a', fontSize: 16 }} />
+                              <strong style={{ color: '#52c41a', fontSize: 15 }}>Phản Hồi Từ Ban Quản Lý</strong>
+                            </div>
+                            <p style={{ 
+                              marginBottom: 0, 
+                              fontSize: 14,
+                              lineHeight: 1.6,
+                              color: '#262626'
+                            }}>
+                              {item.PhanHoi}
+                            </p>
+                          </Space>
+                        </Card>
+                      )}
+                    </div>
+                  </List.Item>
+                );
+              }}
+            />
+          </Card>
+        </Space>
+      </div>
+    </div>
   );
 };
 
