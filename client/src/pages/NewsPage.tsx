@@ -1,8 +1,24 @@
-import { App as AntdApp, Button, Form, Input, Modal, Popconfirm, Table, Typography, Upload } from 'antd';
+﻿import {
+  App as AntdApp,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Row,
+  Space,
+  Table,
+  Typography,
+  Upload,
+  Image
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import type { News } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -16,7 +32,7 @@ const NewsPage = () => {
   const { message } = AntdApp.useApp();
   const isManager = user?.role === 'Ban quan ly';
 
-  const loadNews = async () => {
+  const loadNews = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/news');
@@ -24,11 +40,11 @@ const NewsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadNews();
-  }, []);
+  }, [loadNews]);
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
@@ -68,6 +84,75 @@ const NewsPage = () => {
     }
   };
 
+  const renderResidentView = () => {
+    if (loading) {
+      return (
+        <Row gutter={[16, 16]}>
+          {[1, 2, 3].map((idx) => (
+            <Col xs={24} md={12} xl={8} key={idx}>
+              <Card loading style={{ borderRadius: 20, height: '100%' }} />
+            </Col>
+          ))}
+        </Row>
+      );
+    }
+
+    if (!news.length) {
+      return <Empty description="Chưa có tin tức nào" />;
+    }
+
+    return (
+      <Row gutter={[16, 16]}>
+        {news.map((item) => (
+          <Col xs={24} md={12} xl={8} key={item.ID}>
+            <Card style={{ borderRadius: 20, height: '100%' }}>
+              <Typography.Title level={4} style={{ marginTop: 0 }}>
+                {item.TieuDe}
+              </Typography.Title>
+              <Typography.Text type="secondary">
+                {dayjs(item.NgayDang).format('DD/MM/YYYY HH:mm')}
+              </Typography.Text>
+              <Typography.Paragraph style={{ marginTop: 12 }}>
+                {item.NoiDung}
+              </Typography.Paragraph>
+              {item.HinhAnh && (
+                <>
+                  <Image
+                    src={item.HinhAnh}
+                    alt={item.TieuDe}
+                    style={{ marginTop: 12, borderRadius: 12 }}
+                    width="100%"
+                  />
+                  <Typography.Link href={item.HinhAnh} target="_blank">
+                    Xem hình ảnh
+                  </Typography.Link>
+                </>
+              )}
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    );
+  };
+
+  if (!isManager) {
+    return (
+      <Space direction="vertical" size={24} style={{ width: '100%' }}>
+        <div className="page-header">
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              Bản tin cư dân
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              Theo dõi thông báo mới nhất từ ban quản lý & cộng đồng.
+            </Typography.Text>
+          </div>
+        </div>
+        {renderResidentView()}
+      </Space>
+    );
+  }
+
   return (
     <>
       <div className="page-header">
@@ -81,7 +166,13 @@ const NewsPage = () => {
         )}
       </div>
 
-      <Table rowKey="ID" dataSource={news} loading={loading} bordered columns={newsColumns(handleDelete, isManager)} />
+      <Table
+        rowKey="ID"
+        dataSource={news}
+        loading={loading}
+        bordered
+        columns={newsColumns(handleDelete, isManager)}
+      />
 
       <Modal
         title="Đăng bài mới"
@@ -111,7 +202,10 @@ const NewsPage = () => {
 
 export default NewsPage;
 
-const newsColumns = (onDelete: (record: News) => void, isManager: boolean): ColumnsType<News> => {
+const newsColumns = (
+  onDelete: (record: News) => void,
+  isManager: boolean
+): ColumnsType<News> => {
   const base: ColumnsType<News> = [
     { title: 'Tiêu đề', dataIndex: 'TieuDe', key: 'TieuDe' },
     {
@@ -125,7 +219,17 @@ const newsColumns = (onDelete: (record: News) => void, isManager: boolean): Colu
       title: 'Hình ảnh',
       dataIndex: 'HinhAnh',
       key: 'HinhAnh',
-      render: (val?: string) => (val ? <a href={val}>Xem</a> : '-')
+      render: (val?: string) =>
+        val ? (
+          <Image
+            src={val}
+            width={64}
+            height={48}
+            style={{ objectFit: 'cover', borderRadius: 8 }}
+          />
+        ) : (
+          '-'
+        )
     }
   ];
 
@@ -134,7 +238,10 @@ const newsColumns = (onDelete: (record: News) => void, isManager: boolean): Colu
       title: 'Thao tác',
       key: 'actions',
       render: (_, record) => (
-        <Popconfirm title="Xóa bài viết này?" onConfirm={() => onDelete(record)}>
+        <Popconfirm
+          title="Xóa bài viết này?"
+          onConfirm={() => onDelete(record)}
+        >
           <Button danger type="link">
             Xóa
           </Button>

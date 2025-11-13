@@ -21,9 +21,8 @@ export const validateRequest = (schema: ZodTypeAny): RequestHandler => {
     if (parsed.params !== undefined) {
       req.params = parsed.params as any;
     }
-    if (parsed.query !== undefined) {
-      req.query = parsed.query as any;
-    }
+    // Express v5 exposes req.query as a getter-only property; do not reassign it.
+    // If needed later, attach validated query to locals instead.
     next();
   };
 };

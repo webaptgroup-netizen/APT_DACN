@@ -183,3 +183,16 @@ export const getResidentInfo = async (userId: number) => {
 
   return data;
 };
+
+export const listUsers = async () => {
+  const { data, error } = await supabase
+    .from(USER_TABLE)
+    .select('ID, HoTen, Email, SoDienThoai, LoaiNguoiDung')
+    .order('HoTen', { ascending: true });
+
+  if (error) {
+    throw new AppError('Failed to list users', 500, error);
+  }
+
+  return data;
+};

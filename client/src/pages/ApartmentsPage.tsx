@@ -1,6 +1,6 @@
-import { App as AntdApp, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
+import { App as AntdApp, Button, Card, Col, Empty, Form, Input, InputNumber, Modal, Row, Select, Space, Table, Tag, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import type { Apartment, Building } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -24,7 +24,7 @@ const ApartmentsPage = () => {
 
   const isManager = user?.role === 'Ban quan ly';
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [aptRes, buildingRes] = await Promise.all([api.get('/apartments'), api.get('/buildings')]);
@@ -33,11 +33,11 @@ const ApartmentsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [loadData]);
 
   const filteredData = useMemo(() => {
     return apartments.filter((apt) => {
@@ -93,6 +93,95 @@ const ApartmentsPage = () => {
       }
     }
   ];
+
+  const renderResidentView = () => {
+    if (loading) {
+      return (
+        <Row gutter={[16, 16]}>
+          {[1, 2, 3].map((item) => (
+            <Col xs={24} md={12} xl={8} key={item}>
+              <Card loading style={{ borderRadius: 20, height: '100%' }} />
+            </Col>
+          ))}
+        </Row>
+      );
+    }
+
+    if (!filteredData.length) {
+      return <Empty description="Chưa có căn hộ phù hợp" />;
+    }
+
+    return (
+      <Row gutter={[16, 16]}>
+        {filteredData.map((apt) => {
+          const buildingName = buildings.find((b) => b.ID === apt.ID_ChungCu)?.Ten ?? '---';
+          const statusMeta = statusOptions.find((s) => s.value === apt.TrangThai);
+          return (
+            <Col xs={24} md={12} xl={8} key={apt.ID}>
+              <Card style={{ borderRadius: 20, height: '100%' }} title={`${apt.MaCan} · ${buildingName}`}>
+                <Space size="small" wrap>
+                  <Tag color={statusMeta?.color}>{statusMeta?.label ?? apt.TrangThai}</Tag>
+                  {apt.DienTich && <Tag>{apt.DienTich} m²</Tag>}
+                  {apt.SoPhong && <Tag color="purple">{apt.SoPhong} phòng</Tag>}
+                </Space>
+                {apt.URLs && apt.URLs.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <img
+                      src={apt.URLs[0]}
+                      alt="Ảnh căn hộ"
+                      style={{ width: '100%', borderRadius: 12, maxHeight: 220, objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
+                <Typography.Paragraph style={{ marginTop: 12 }}>
+                  {apt.MoTa ?? 'Căn hộ phù hợp cho gia đình hiện đại.'}
+                </Typography.Paragraph>
+                {apt.Gia && (
+                  <Typography.Title level={4} style={{ margin: 0 }}>
+                    {apt.Gia.toLocaleString('vi-VN')} ₫
+                  </Typography.Title>
+                )}
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    );
+  };
+
+  if (!isManager) {
+    return (
+      <Space direction="vertical" size={24} style={{ width: '100%' }}>
+        <div className="page-header">
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              Khám phá căn hộ
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              Lọc theo tòa nhà hoặc trạng thái để tìm không gian sống phù hợp.
+            </Typography.Text>
+          </div>
+          <Space>
+            <Select
+              allowClear
+              placeholder="Chọn chung cư"
+              style={{ minWidth: 200 }}
+              options={buildings.map((b) => ({ label: b.Ten, value: b.ID }))}
+              onChange={(value) => setFilters((prev) => ({ ...prev, buildingId: value }))}
+            />
+            <Select
+              allowClear
+              placeholder="Trạng thái"
+              style={{ minWidth: 160 }}
+              options={statusOptions}
+              onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+            />
+          </Space>
+        </div>
+        {renderResidentView()}
+      </Space>
+    );
+  }
 
   return (
     <>

@@ -1,4 +1,4 @@
-import {
+﻿import {
   ApartmentOutlined,
   BankOutlined,
   BellOutlined,
@@ -8,6 +8,7 @@ import {
   HomeOutlined,
   LogoutOutlined,
   SettingOutlined,
+  TeamOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
 import { Avatar, Button, Layout, Menu, Space, Typography } from 'antd';
@@ -18,14 +19,15 @@ import { useAuthStore } from '../store/useAuthStore';
 const { Header, Sider, Content } = Layout;
 
 const navItems = [
-  { key: '/dashboard', icon: <HomeOutlined />, label: 'Tổng quan' },
-  { key: '/buildings', icon: <BankOutlined />, label: 'Chung cư' },
-  { key: '/apartments', icon: <ApartmentOutlined />, label: 'Căn hộ' },
-  { key: '/services', icon: <CustomerServiceOutlined />, label: 'Dịch vụ' },
-  { key: '/invoices', icon: <FileTextOutlined />, label: 'Hóa đơn' },
-  { key: '/news', icon: <ContainerOutlined />, label: 'Tin tức' },
-  { key: '/complaints', icon: <BellOutlined />, label: 'Phản ánh' },
-  { key: '/profile', icon: <SettingOutlined />, label: 'Tài khoản' }
+  { key: '/dashboard', icon: <HomeOutlined />, label: 'Tong quan' },
+  { key: '/buildings', icon: <BankOutlined />, label: 'Chung cu' },
+  { key: '/apartments', icon: <ApartmentOutlined />, label: 'Can ho' },
+  { key: '/residents', icon: <TeamOutlined />, label: 'Cu dan' },
+  { key: '/services', icon: <CustomerServiceOutlined />, label: 'Dich vu' },
+  { key: '/invoices', icon: <FileTextOutlined />, label: 'Hoa don' },
+  { key: '/news', icon: <ContainerOutlined />, label: 'Tin tuc' },
+  { key: '/complaints', icon: <BellOutlined />, label: 'Phan anh' },
+  { key: '/profile', icon: <SettingOutlined />, label: 'Tai khoan' }
 ];
 
 const DashboardLayout = () => {
@@ -61,7 +63,7 @@ const DashboardLayout = () => {
               APT-CONNECT
             </Typography.Title>
             <Typography.Text style={{ color: 'rgba(255,255,255,0.7)' }}>
-              Chủ động vận hành khu dân cư
+              Chá»§ Ä‘á»™ng váº­n hÃ nh khu dÃ¢n cÆ°
             </Typography.Text>
           </Space>
         </div>
@@ -82,7 +84,7 @@ const DashboardLayout = () => {
             icon={<LogoutOutlined />}
             onClick={() => handleMenuClick({ key: 'logout' })}
           >
-            Đăng xuất
+            ÄÄƒng xuáº¥t
           </Button>
         </div>
       </Sider>
@@ -99,14 +101,14 @@ const DashboardLayout = () => {
         >
           <Space>
             <ThunderboltOutlined style={{ color: '#faad14' }} />
-            <Typography.Text>Mạng quản lý cư dân số</Typography.Text>
+            <Typography.Text>Máº¡ng quáº£n lÃ½ cÆ° dÃ¢n sá»‘</Typography.Text>
           </Space>
           <Space size="middle">
             <div style={{ textAlign: 'right' }}>
               <Typography.Text strong>{user?.hoTen ?? '---'}</Typography.Text>
               <br />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {user?.role ?? 'Khách'}
+                {user?.role ?? 'KhÃ¡ch'}
               </Typography.Text>
             </div>
             <Avatar style={{ background: '#2563eb' }}>
@@ -123,3 +125,4 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
+

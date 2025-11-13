@@ -40,7 +40,7 @@ const ProfilePage = () => {
         </Typography.Title>
       </div>
       {successMsg && <Alert type="success" message={successMsg} closable onClose={() => setSuccessMsg(undefined)} />}
-      <Card title="Thông tin cư dân" bordered={false}>
+    <Card title="Thông tin cư dân" variant="borderless">
         <Form layout="vertical" form={profileForm} onFinish={handleUpdateProfile}>
           <Form.Item label="Họ tên" name="hoTen">
             <Input placeholder="Tên của bạn" />
@@ -53,7 +53,7 @@ const ProfilePage = () => {
           </Button>
         </Form>
       </Card>
-      <Card title="Đổi mật khẩu" bordered={false}>
+    <Card title="Đổi mật khẩu" variant="borderless">
           <Form layout="vertical" form={passwordForm} onFinish={handleChangePassword}>
             <Form.Item label="Mật khẩu hiện tại" name="currentPassword" rules={[{ required: true }]}>
               <Input.Password placeholder="*******" />

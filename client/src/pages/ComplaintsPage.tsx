@@ -73,7 +73,7 @@ const ComplaintsPage = () => {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       {user && (
-        <Card title="Gửi phản ánh" bordered={false}>
+        <Card title="Gửi phản ánh" variant="borderless">
           <Form layout="vertical" form={form} onFinish={handleSubmit}>
             <Form.Item label="Nội dung" name="NoiDung" rules={[{ required: true, message: 'Nhập nội dung phản ánh' }]}>
               <Input.TextArea rows={4} placeholder="Mô tả sự cố bạn gặp phải..." />
@@ -93,7 +93,7 @@ const ComplaintsPage = () => {
         </Card>
       )}
 
-      <Card title="Danh sách phản ánh" bordered={false}>
+      <Card title="Danh sách phản ánh" variant="borderless">
         <List
           loading={loading}
           dataSource={complaints}
@@ -135,6 +135,9 @@ const ComplaintsPage = () => {
               />
               <div>
                 <p>{item.NoiDung}</p>
+                {item.HinhAnh && (
+                  <img src={item.HinhAnh} alt="Ảnh minh chứng" style={{ maxWidth: 200, borderRadius: 8, display: 'block', marginTop: 8 }} />
+                )}
                 {item.HinhAnh && (
                   <a href={item.HinhAnh} target="_blank" rel="noreferrer">
                     Xem ảnh

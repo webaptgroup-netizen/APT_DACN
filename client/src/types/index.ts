@@ -70,3 +70,29 @@ export interface Complaint {
     Email: string;
   };
 }
+
+export interface Resident {
+  ID: number;
+  ID_NguoiDung: number;
+  ID_CanHo: number;
+  ID_ChungCu: number;
+  LaChuHo: boolean;
+  NguoiDungs?: {
+    HoTen: string;
+    Email: string;
+    SoDienThoai?: string;
+    LoaiNguoiDung: UserRole;
+  };
+  CanHos?: {
+    MaCan: string;
+    TrangThai?: string;
+  };
+}
+
+export interface UserSummary {
+  ID: number;
+  HoTen: string;
+  Email: string;
+  SoDienThoai?: string;
+  LoaiNguoiDung: UserRole;
+}

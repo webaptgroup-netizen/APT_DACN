@@ -1,6 +1,24 @@
-import { App as AntdApp, Button, Form, Input, InputNumber, Modal, Popconfirm, Table, Tag, Upload } from 'antd';
+﻿import {
+  App as AntdApp,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Row,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  Upload,
+  Image
+} from 'antd';
 import type { UploadProps } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import type { Service } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -14,7 +32,8 @@ const ServicesPage = () => {
   const { message } = AntdApp.useApp();
   const isManager = user?.role === 'Ban quan ly';
 
-  const loadServices = async () => {
+  // 📦 Load danh sách dịch vụ
+  const loadServices = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/services');
@@ -22,12 +41,13 @@ const ServicesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadServices();
-  }, []);
+  }, [loadServices]);
 
+  // 💾 Thêm mới dịch vụ
   const handleSubmit = async () => {
     const values = await form.validateFields();
     try {
@@ -41,25 +61,28 @@ const ServicesPage = () => {
     }
   };
 
+  // ❌ Xóa dịch vụ
   const handleDelete = async (service: Service) => {
     try {
       await api.delete(`/services/${service.ID}`);
       message.success('Đã xóa dịch vụ');
       await loadServices();
     } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể xóa');
+      message.error(err.response?.data?.message ?? 'Không thể xóa dịch vụ');
     }
   };
 
+  // 📝 Cư dân đăng ký dịch vụ
   const handleRegister = async (id: number) => {
     try {
       await api.post(`/services/${id}/register`);
       message.success('Đăng ký dịch vụ thành công. Vui lòng kiểm tra hóa đơn.');
     } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể đăng ký');
+      message.error(err.response?.data?.message ?? 'Không thể đăng ký dịch vụ');
     }
   };
 
+  // 🖼️ Upload ảnh lên Supabase
   const fileToBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -78,11 +101,85 @@ const ServicesPage = () => {
         fileName: file.name
       });
       form.setFieldsValue({ HinhAnh: data.url });
-      message.success('Đã tải ảnh');
+      message.success('Đã tải ảnh lên Supabase');
       return false;
     }
   };
 
+  // 👀 Hiển thị giao diện cư dân
+  const renderResidentView = () => {
+    if (loading) {
+      return (
+        <Row gutter={[16, 16]}>
+          {[1, 2, 3].map((idx) => (
+            <Col xs={24} md={12} xl={8} key={idx}>
+              <Card loading style={{ borderRadius: 20, height: '100%' }} />
+            </Col>
+          ))}
+        </Row>
+      );
+    }
+
+    if (!services.length) {
+      return <Empty description="Chưa có dịch vụ khả dụng" />;
+    }
+
+    return (
+      <Row gutter={[16, 16]}>
+        {services.map((service) => (
+          <Col xs={24} md={12} xl={8} key={service.ID}>
+            <Card
+              style={{ borderRadius: 20, height: '100%' }}
+              title={service.TenDichVu}
+              cover={
+                service.HinhAnh ? (
+                  <Image
+                    src={service.HinhAnh}
+                    height={180}
+                    style={{ objectFit: 'cover', borderRadius: '20px 20px 0 0' }}
+                    preview={false}
+                  />
+                ) : null
+              }
+            >
+              <Typography.Paragraph type="secondary">
+                {service.MoTa ?? 'Dịch vụ cao cấp cho cư dân.'}
+              </Typography.Paragraph>
+              <Tag color="blue" style={{ marginBottom: 12 }}>
+                {service.Gia.toLocaleString('vi-VN')} ₫
+              </Tag>
+              <div>
+                <Button type="primary" onClick={() => handleRegister(service.ID)}>
+                  Đăng ký ngay
+                </Button>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    );
+  };
+
+  // 🧑‍💼 Nếu không phải quản lý → xem giao diện cư dân
+  if (!isManager) {
+    return (
+      <Space direction="vertical" size={24} style={{ width: '100%' }}>
+        <div className="page-header">
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              Dịch vụ cư dân
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              Đặt lịch vệ sinh, sửa chữa, chăm sóc cảnh quan... chỉ với một chạm.
+            </Typography.Text>
+          </div>
+        </div>
+        {renderResidentView()}
+      </Space>
+    );
+  }
+
+  // 👩‍💼 Giao diện quản lý
   return (
     <>
       <div className="page-header">
@@ -106,13 +203,25 @@ const ServicesPage = () => {
             title: 'Giá (VND)',
             dataIndex: 'Gia',
             key: 'Gia',
-            render: (val: number) => <Tag color="blue">{val.toLocaleString('vi-VN')} đ</Tag>
+            render: (val: number) => (
+              <Tag color="blue">{val.toLocaleString('vi-VN')} ₫</Tag>
+            )
           },
           {
             title: 'Hình ảnh',
             dataIndex: 'HinhAnh',
             key: 'HinhAnh',
-            render: (url?: string) => (url ? <a href={url}>Xem</a> : '-')
+            render: (url?: string) =>
+              url ? (
+                <Image
+                  src={url}
+                  width={64}
+                  height={48}
+                  style={{ objectFit: 'cover', borderRadius: 8 }}
+                />
+              ) : (
+                '-'
+              )
           },
           {
             title: 'Thao tác',
@@ -141,10 +250,18 @@ const ServicesPage = () => {
         okText="Lưu"
       >
         <Form layout="vertical" form={form}>
-          <Form.Item label="Tên dịch vụ" name="TenDichVu" rules={[{ required: true, message: 'Nhập tên dịch vụ' }]}>
+          <Form.Item
+            label="Tên dịch vụ"
+            name="TenDichVu"
+            rules={[{ required: true, message: 'Nhập tên dịch vụ' }]}
+          >
             <Input />
           </Form.Item>
-          <Form.Item label="Giá (VND)" name="Gia" rules={[{ required: true, message: 'Nhập giá dịch vụ' }]}>
+          <Form.Item
+            label="Giá (VND)"
+            name="Gia"
+            rules={[{ required: true, message: 'Nhập giá dịch vụ' }]}
+          >
             <InputNumber style={{ width: '100%' }} min={0} step={10000} />
           </Form.Item>
           <Form.Item label="Mô tả" name="MoTa">

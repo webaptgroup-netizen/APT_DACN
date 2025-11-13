@@ -1,18 +1,22 @@
 import {
   App as AntdApp,
   Button,
+  Card,
+  Col,
+  Empty,
   Form,
   Input,
   InputNumber,
   Modal,
   Popconfirm,
+  Row,
   Space,
   Table,
   Tag,
   Typography
 } from 'antd';
 import { ColumnsType } from 'antd/es/table';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import type { Building } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -28,7 +32,7 @@ const BuildingsPage = () => {
 
   const isManager = user?.role === 'Ban quan ly';
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/buildings');
@@ -36,11 +40,11 @@ const BuildingsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [loadData]);
 
   const openModal = (record?: Building) => {
     if (record) {
@@ -126,6 +130,62 @@ const BuildingsPage = () => {
     }
     return base;
   }, [isManager]);
+
+  const renderResidentView = () => {
+    if (loading) {
+      return (
+        <Row gutter={[16, 16]}>
+          {[1, 2, 3].map((skeleton) => (
+            <Col xs={24} md={12} xl={8} key={skeleton}>
+              <Card loading style={{ borderRadius: 20, height: '100%' }} />
+            </Col>
+          ))}
+        </Row>
+      );
+    }
+
+    if (!data.length) {
+      return <Empty description="Chưa có dữ liệu chung cư" />;
+    }
+
+    return (
+      <Row gutter={[16, 16]}>
+        {data.map((building) => (
+          <Col xs={24} md={12} xl={8} key={building.ID}>
+            <Card style={{ borderRadius: 20, height: '100%' }} title={building.Ten}>
+              <Typography.Paragraph type="secondary">{building.DiaChi}</Typography.Paragraph>
+              <Space size="small" wrap>
+                {building.NamXayDung && <Tag color="blue">{building.NamXayDung}</Tag>}
+                {building.SoTang && <Tag>{building.SoTang} tầng</Tag>}
+                {building.ChuDauTu && <Tag color="purple">{building.ChuDauTu}</Tag>}
+              </Space>
+              {building.MoTa && (
+                <Typography.Paragraph style={{ marginTop: 12 }}>{building.MoTa}</Typography.Paragraph>
+              )}
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    );
+  };
+
+  if (!isManager) {
+    return (
+      <Space direction="vertical" size={24} style={{ width: '100%' }}>
+        <div className="page-header">
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              Danh sách chung cư
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              Xem nhanh thông tin dự án, vị trí và tiện ích để lựa chọn nơi ở phù hợp.
+            </Typography.Text>
+          </div>
+        </div>
+        {renderResidentView()}
+      </Space>
+    );
+  }
 
   return (
     <>

@@ -21,14 +21,14 @@ const ChatbotWidget = () => {
   const sendMessage = async (event: FormEvent) => {
     event.preventDefault();
     if (!input.trim()) return;
-    const uuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+    const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : Date.now().toString();
     const userMessage: Message = { id: uuid, from: 'me', text: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
     try {
       const { data } = await api.post('/chatbot/ask', { message: userMessage.text });
-      const botId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-bot`;
+      const botId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : `${Date.now()}-bot`;
       setMessages((prev) => [...prev, { id: botId, from: 'bot', text: data.answer }]);
     } catch (error) {
       setMessages((prev) => [
@@ -72,3 +72,4 @@ const ChatbotWidget = () => {
 };
 
 export default ChatbotWidget;
+

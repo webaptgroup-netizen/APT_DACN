@@ -7,6 +7,7 @@ import {
   changePassword,
   createUser,
   getProfileWithResidency,
+  listUsers,
   updateProfile
 } from './auth.service';
 import { signToken } from '../../utils/jwt';
@@ -142,6 +143,16 @@ router.post(
     const { elevateRole } = await import('./auth.service');
     const updated = await elevateRole(req.body.userId, req.body.role);
     res.json(updated);
+  })
+);
+
+router.get(
+  '/users',
+  requireAuth,
+  requireRoles('Ban quan ly'),
+  asyncHandler(async (_req, res) => {
+    const users = await listUsers();
+    res.json(users);
   })
 );
 

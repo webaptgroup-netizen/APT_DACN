@@ -15,6 +15,7 @@ import NewsPage from './pages/NewsPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/Register';
 import ServicesPage from './pages/ServicesPage';
+import ResidentsPage from './pages/ResidentsPage';
 
 const router = createBrowserRouter([
   {
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'buildings', element: <BuildingsPage /> },
       { path: 'apartments', element: <ApartmentsPage /> },
       { path: 'services', element: <ServicesPage /> },
+      { path: 'residents', element: <ResidentsPage /> },
       { path: 'invoices', element: <InvoicesPage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'complaints', element: <ComplaintsPage /> },

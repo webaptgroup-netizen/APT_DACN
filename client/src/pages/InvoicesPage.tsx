@@ -1,7 +1,7 @@
-import { Badge, Button, Select, Space, Table, Tag, Typography } from 'antd';
+import { Badge, Button, Card, Col, Empty, Row, Select, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import type { Invoice } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -17,7 +17,7 @@ const InvoicesPage = () => {
   const { user } = useAuthStore();
   const isManager = user?.role === 'Ban quan ly';
 
-  const loadInvoices = async () => {
+  const loadInvoices = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/invoices');
@@ -25,11 +25,11 @@ const InvoicesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadInvoices();
-  }, []);
+  }, [loadInvoices]);
 
   const handleStatusChange = async (record: Invoice, status: Invoice['TrangThai']) => {
     await api.patch(`/invoices/${record.ID}/status`, { status });
@@ -78,6 +78,68 @@ const InvoicesPage = () => {
         )
     }
   ];
+
+  const renderResidentView = () => {
+    if (loading) {
+      return (
+        <Row gutter={[16, 16]}>
+          {[1, 2, 3].map((idx) => (
+            <Col xs={24} md={12} key={idx}>
+              <Card loading style={{ borderRadius: 20 }} />
+            </Col>
+          ))}
+        </Row>
+      );
+    }
+
+    if (!invoices.length) {
+      return <Empty description="Chưa có hóa đơn nào" />;
+    }
+
+    return (
+      <Row gutter={[16, 16]}>
+        {invoices.map((invoice) => {
+          const statusMeta = statusOptions.find((s) => s.value === invoice.TrangThai);
+          return (
+            <Col xs={24} md={12} key={invoice.ID}>
+              <Card style={{ borderRadius: 20 }}>
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <Typography.Title level={4} style={{ margin: 0 }}>
+                    {invoice.CanHos?.MaCan ?? 'Căn hộ'}
+                  </Typography.Title>
+                  <Typography.Text type="secondary">{invoice.ChungCus?.Ten ?? '---'}</Typography.Text>
+                  <Tag color={statusMeta?.color}>{statusMeta?.label ?? invoice.TrangThai}</Tag>
+                  <Typography.Title level={3} style={{ margin: 0 }}>
+                    {invoice.SoTien.toLocaleString('vi-VN')} ₫
+                  </Typography.Title>
+                  <Typography.Text type="secondary">
+                    Ngày lập: {dayjs(invoice.NgayLap).format('DD/MM/YYYY')}
+                  </Typography.Text>
+                </Space>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    );
+  };
+
+  if (!isManager) {
+    return (
+      <Space direction="vertical" size={24} style={{ width: '100%' }}>
+        <div className="page-header">
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              Hóa đơn hộ gia đình
+            </Typography.Title>
+            <Typography.Text type="secondary">Theo dõi trạng thái thanh toán của căn hộ bạn đang sinh sống.</Typography.Text>
+          </div>
+          <Button onClick={() => loadInvoices()}>Tải lại</Button>
+        </div>
+        {renderResidentView()}
+      </Space>
+    );
+  }
 
   return (
     <>
