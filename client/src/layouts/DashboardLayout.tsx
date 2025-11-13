@@ -19,15 +19,15 @@ import { useAuthStore } from '../store/useAuthStore';
 const { Header, Sider, Content } = Layout;
 
 const navItems = [
-  { key: '/dashboard', icon: <HomeOutlined />, label: 'Tong quan' },
-  { key: '/buildings', icon: <BankOutlined />, label: 'Chung cu' },
-  { key: '/apartments', icon: <ApartmentOutlined />, label: 'Can ho' },
-  { key: '/residents', icon: <TeamOutlined />, label: 'Cu dan' },
-  { key: '/services', icon: <CustomerServiceOutlined />, label: 'Dich vu' },
-  { key: '/invoices', icon: <FileTextOutlined />, label: 'Hoa don' },
-  { key: '/news', icon: <ContainerOutlined />, label: 'Tin tuc' },
-  { key: '/complaints', icon: <BellOutlined />, label: 'Phan anh' },
-  { key: '/profile', icon: <SettingOutlined />, label: 'Tai khoan' }
+  { key: '/dashboard', icon: <HomeOutlined />, label: 'Tổng quan' },
+  { key: '/buildings', icon: <BankOutlined />, label: 'Chung cư' },
+  { key: '/apartments', icon: <ApartmentOutlined />, label: 'Căn hộ' },
+  { key: '/residents', icon: <TeamOutlined />, label: 'Cư dân' },
+  { key: '/services', icon: <CustomerServiceOutlined />, label: 'Dịch vụ' },
+  { key: '/invoices', icon: <FileTextOutlined />, label: 'Hóa đơn' },
+  { key: '/news', icon: <ContainerOutlined />, label: 'Tin tức' },
+  { key: '/complaints', icon: <BellOutlined />, label: 'Phản ánh' },
+  { key: '/profile', icon: <SettingOutlined />, label: 'Tài khoản' }
 ];
 
 const DashboardLayout = () => {
@@ -54,19 +54,28 @@ const DashboardLayout = () => {
       <Sider
         breakpoint="lg"
         collapsedWidth={80}
-        style={{ background: '#0f172a' }}
         width={240}
+        style={{ background: '#1e293b' }} // đổi màu nền để logo nổi bật
       >
-        <div style={{ padding: '20px 16px', color: 'white' }}>
-          <Space direction="vertical" size={4}>
+        {/* Logo video */}
+        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <video
+            src="https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/logo.mp4"
+            autoPlay
+            loop
+            muted
+            style={{ width: 60, borderRadius: 8, marginBottom: 12 }}
+          />
+          <Space direction="vertical" size={4} style={{ textAlign: 'center' }}>
             <Typography.Title level={4} style={{ color: 'white', margin: 0 }}>
               APT-CONNECT
             </Typography.Title>
-            <Typography.Text style={{ color: 'rgba(255,255,255,0.7)' }}>
-              Chá»§ Ä‘á»™ng váº­n hÃ nh khu dÃ¢n cÆ°
+            <Typography.Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
+              Chủ động vận hành khu dân cư
             </Typography.Text>
           </Space>
         </div>
+
         <Menu
           mode="inline"
           theme="dark"
@@ -77,17 +86,20 @@ const DashboardLayout = () => {
             icon: item.icon,
             label: item.label
           }))}
+          style={{ marginTop: 16 }}
         />
+
         <div style={{ padding: 16 }}>
           <Button
             block
             icon={<LogoutOutlined />}
             onClick={() => handleMenuClick({ key: 'logout' })}
           >
-            ÄÄƒng xuáº¥t
+            Đăng xuất
           </Button>
         </div>
       </Sider>
+
       <Layout style={{ background: '#f5f6fa' }}>
         <Header
           style={{
@@ -101,14 +113,14 @@ const DashboardLayout = () => {
         >
           <Space>
             <ThunderboltOutlined style={{ color: '#faad14' }} />
-            <Typography.Text>Máº¡ng quáº£n lÃ½ cÆ° dÃ¢n sá»‘</Typography.Text>
+            <Typography.Text>Mạng quản lý cư dân số</Typography.Text>
           </Space>
           <Space size="middle">
             <div style={{ textAlign: 'right' }}>
               <Typography.Text strong>{user?.hoTen ?? '---'}</Typography.Text>
               <br />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {user?.role ?? 'KhÃ¡ch'}
+                {user?.role ?? 'Khách'}
               </Typography.Text>
             </div>
             <Avatar style={{ background: '#2563eb' }}>
@@ -116,6 +128,7 @@ const DashboardLayout = () => {
             </Avatar>
           </Space>
         </Header>
+
         <Content style={{ padding: 24 }}>
           <Outlet />
         </Content>
@@ -125,4 +138,3 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
-
