@@ -73,7 +73,6 @@ const LoginPage = () => {
         ))}
       </div>
 
-      {/* Không có overlay mờ — nền rõ hoàn toàn */}
 
       {/* Form đăng nhập */}
       <div
@@ -91,10 +90,10 @@ const LoginPage = () => {
             width: 420,
             padding: '32px 28px',
             borderRadius: 18,
-            border: '1px solid rgba(255,255,255,0.4)',
-            background: 'rgba(255,255,255,0.25)', // trong suốt nhẹ
-            boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
-            backdropFilter: 'blur(6px)', // blur nhẹ để tách text khỏi nền mà vẫn rõ clip
+            border: '2px solid rgba(255,255,255,0.5)',
+            background: 'rgba(0,0,0,0.75)',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(10px)',
             color: '#fff',
           }}
         >
@@ -119,16 +118,17 @@ const LoginPage = () => {
                 marginBottom: 0,
                 color: 'white',
                 letterSpacing: 0.5,
-                textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                textShadow: '0 2px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)',
               }}
             >
               Chào mừng trở lại 👋
             </Title>
             <Paragraph
               style={{
-                color: '#f1f5f9',
+                color: '#cbd5e1',
                 marginTop: 6,
-                textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                fontWeight: 500,
               }}
             >
               Đăng nhập để quản lý cư dân và dịch vụ
@@ -143,47 +143,84 @@ const LoginPage = () => {
               style={{
                 marginBottom: 16,
                 borderRadius: 8,
-                background: 'rgba(255,255,255,0.15)',
-                border: 'none',
+                background: 'rgba(220,38,38,0.2)',
+                border: '1px solid rgba(239,68,68,0.4)',
+                color: '#fecaca',
               }}
             />
           )}
 
           <Form layout="vertical" onFinish={handleSubmit}>
             <Form.Item
-              label={<Text strong style={{ color: 'white' }}>Email</Text>}
+              label={
+                <Text 
+                  strong 
+                  style={{ 
+                    color: 'white',
+                    textShadow: '0 1px 3px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)',
+                  }}
+                >
+                  Email
+                </Text>
+              }
               name="email"
               rules={[{ required: true, message: 'Vui lòng nhập email' }]}
             >
               <Input
-                prefix={<MailOutlined style={{ color: '#e2e8f0' }} />}
+                prefix={
+                  <span style={{ fontSize: '18px' }}>✉️</span>
+                }
                 placeholder="you@example.com"
                 size="large"
                 style={{
                   borderRadius: 8,
-                  background: 'rgba(255,255,255,0.25)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  background: 'rgba(255,255,255,0.95)',
+                  color: '#1e293b',
+                  border: '2px solid rgba(255,255,255,0.8)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+                styles={{
+                  input: {
+                    color: '#1e293b',
+                    fontWeight: 500,
+                  },
                 }}
               />
             </Form.Item>
 
             <Form.Item
-              label={<Text strong style={{ color: 'white' }}>Mật khẩu</Text>}
+              label={
+                <Text 
+                  strong 
+                  style={{ 
+                    color: 'white',
+                    textShadow: '0 1px 3px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)',
+                  }}
+                >
+                  Mật khẩu
+                </Text>
+              }
               name="password"
               rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: '#e2e8f0' }} />}
+                prefix={
+                  <span style={{ fontSize: '18px' }}>🔐</span>
+                }
                 placeholder="••••••••"
                 size="large"
                 style={{
                   borderRadius: 8,
-                  background: 'rgba(255,255,255,0.25)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  background: 'rgba(255,255,255,0.95)',
+                  color: '#1e293b',
+                  border: '2px solid rgba(255,255,255,0.8)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+                styles={{
+                  input: {
+                    color: '#1e293b',
+                    fontWeight: 500,
+                  },
                 }}
               />
             </Form.Item>
@@ -199,8 +236,10 @@ const LoginPage = () => {
                 background: 'linear-gradient(90deg,#60a5fa,#8b5cf6)',
                 fontWeight: 600,
                 letterSpacing: 0.3,
-                boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                boxShadow: '0 4px 14px rgba(99,102,241,0.5)',
                 color: '#fff',
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                border: 'none',
               }}
             >
               Đăng nhập
@@ -212,8 +251,9 @@ const LoginPage = () => {
               textAlign: 'center',
               marginTop: 20,
               fontSize: 15,
-              color: '#f1f5f9',
-              textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+              color: '#cbd5e1',
+              textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+              fontWeight: 500,
             }}
           >
             Chưa có tài khoản?{' '}
@@ -222,9 +262,10 @@ const LoginPage = () => {
               style={{
                 color: '#93c5fd',
                 fontWeight: 600,
+                textShadow: '0 1px 3px rgba(0,0,0,0.6)',
               }}
             >
-              Đăng ký cư dân
+              Đăng ký tài khoản
             </Link>
           </Paragraph>
         </Card>
