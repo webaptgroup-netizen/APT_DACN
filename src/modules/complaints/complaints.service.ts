@@ -1,8 +1,10 @@
+import axios from 'axios';
 import dayjs from 'dayjs';
 import { supabase } from '../../config/supabase';
 import { AppError } from '../../utils/appError';
 
 const TABLE = 'PhanAnhs';
+const COMPLAINT_WEBHOOK_URL = 'https://n8n.vtcmobile.vn/webhook/GUIPHANANH';
 
 export type ComplaintStatus = 'Chua xu ly' | 'Dang xu ly' | 'Da xu ly';
 
@@ -52,6 +54,30 @@ export const createComplaint = async (userId: number, payload: ComplaintPayload)
 
   if (error) {
     throw new AppError('Failed to submit complaint', 500, error);
+  }
+
+  // Best-effort: notify external n8n workflow about new complaint
+  try {
+    // Fetch basic user info (resident sending complaint)
+    const { data: user } = await supabase
+      .from('NguoiDungs')
+      .select('HoTen, Email')
+      .eq('ID', userId)
+      .maybeSingle();
+
+    await axios.post(COMPLAINT_WEBHOOK_URL, {
+      email: user?.Email,
+      residentName: user?.HoTen,
+      complaintId: data.ID,
+      complaintTitle: `Phản ánh #${data.ID}`,
+      complaintContent: data.NoiDung,
+      priority: 'Thường',
+      category: 'Phản ánh cư dân',
+      timestamp: data.NgayGui
+    });
+  } catch (err) {
+    // Không làm hỏng nghiệp vụ chính nếu gửi webhook thất bại
+    console.warn('Failed to notify complaint webhook', err);
   }
 
   return data;
