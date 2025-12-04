@@ -1,20 +1,20 @@
-import { Badge, Button, Card, Col, DatePicker, Empty, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd';
+﻿import { Badge, Button, Card, Col, DatePicker, Empty, Modal, Row, Select, Space, Table, Tag, Tabs, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import type { Invoice, Resident } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
 
 const statusOptions = [
-  { label: 'Chưa thanh toán', value: 'Chua thanh toan', color: 'red' },
-  { label: 'Đã thanh toán', value: 'Da thanh toan', color: 'green' }
+  { label: 'Chua thanh toán', value: 'Chua thanh toan', color: 'red' },
+  { label: 'Ðã thanh toán', value: 'Da thanh toan', color: 'green' }
 ];
 
 const paymentMethodOptions = [
-  { label: 'Tiền mặt', value: 'Tien mat' },
-  { label: 'Chuyển khoản', value: 'Chuyen khoan' },
-  { label: 'Ví điện tử', value: 'Vi dien tu' }
+  { label: 'Ti?n m?t', value: 'Tien mat' },
+  { label: 'Chuy?n kho?n', value: 'Chuyen khoan' },
+  { label: 'Ví di?n t?', value: 'Vi dien tu' }
 ];
 
 interface Receipt {
@@ -52,6 +52,14 @@ const InvoicesPage = () => {
 
   const { user } = useAuthStore();
   const isManager = user?.role === 'Ban quan ly';
+  const unpaidInvoices = useMemo(
+    () => invoices.filter((i) => i.TrangThai === 'Chua thanh toan'),
+    [invoices]
+  );
+  const paidInvoices = useMemo(
+    () => invoices.filter((i) => i.TrangThai === 'Da thanh toan'),
+    [invoices]
+  );
 
   const loadInvoices = useCallback(async () => {
     setLoading(true);
@@ -87,10 +95,10 @@ const InvoicesPage = () => {
         payload.ngayThucHien = new Date().toISOString();
       }
       await api.patch(`/invoices/${record.ID}/status`, payload);
-      message.success('Đã cập nhật trạng thái hóa đơn');
+      message.success('ÄÃ£ cáº­p nháº­t tráº¡ng thÃ¡i hÃ³a Ä‘Æ¡n');
       await loadInvoices();
     } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể cập nhật hóa đơn');
+      message.error(err.response?.data?.message ?? 'KhÃ´ng thá»ƒ cáº­p nháº­t hÃ³a Ä‘Æ¡n');
     }
   };
 
@@ -102,9 +110,9 @@ const InvoicesPage = () => {
       setReceiptOpen(true);
     } catch (err: any) {
       if (err.response?.status === 404) {
-        message.warning('Hóa đơn này chưa có phiếu thu');
+        message.warning('HÃ³a Ä‘Æ¡n nÃ y chÆ°a cÃ³ phiáº¿u thu');
       } else {
-        message.error(err.response?.data?.message ?? 'Không thể tải phiếu thu');
+        message.error(err.response?.data?.message ?? 'KhÃ´ng thá»ƒ táº£i phiáº¿u thu');
       }
     } finally {
       setReceiptLoading(false);
@@ -159,18 +167,18 @@ const InvoicesPage = () => {
       }
 
       await api.patch(`/invoices/${editingInvoice.ID}/status`, body);
-      message.success('Đã cập nhật ngày thực hiện / hình thức thanh toán');
+      message.success('ÄÃ£ cáº­p nháº­t ngÃ y thá»±c hiá»‡n / hÃ¬nh thá»©c thanh toÃ¡n');
       setMetaModalOpen(false);
       await loadInvoices();
     } catch (err: any) {
       message.error(
-        err.response?.data?.message ?? 'Không thể cập nhật ngày thực hiện / hình thức thanh toán'
+        err.response?.data?.message ?? 'KhÃ´ng thá»ƒ cáº­p nháº­t ngÃ y thá»±c hiá»‡n / hÃ¬nh thá»©c thanh toÃ¡n'
       );
     }
   };
 
   const renderPaymentMethod = (value?: string) => {
-    if (!value) return 'Chưa thiết lập';
+    if (!value) return 'ChÆ°a thiáº¿t láº­p';
     const found = paymentMethodOptions.find((p) => p.value === value);
     return found?.label ?? value;
   };
@@ -178,7 +186,7 @@ const InvoicesPage = () => {
   const renderServicesText = (invoice: Invoice | Receipt['HoaDonDichVus']) => {
     const list = invoice?.HoaDonDichVu_DichVus;
     if (!list || !list.length) {
-      return 'Không xác định';
+      return 'KhÃ´ng xÃ¡c Ä‘á»‹nh';
     }
     return list
       .map((item) => item.DichVus?.TenDichVu)
@@ -187,10 +195,10 @@ const InvoicesPage = () => {
   };
 
   const columns: ColumnsType<Invoice> = [
-    { title: 'Căn hộ', dataIndex: ['CanHos', 'MaCan'], key: 'canho' },
-    { title: 'Chung cư', dataIndex: ['ChungCus', 'Ten'], key: 'chungcu' },
+    { title: 'CÄƒn há»™', dataIndex: ['CanHos', 'MaCan'], key: 'canho' },
+    { title: 'Chung cÆ°', dataIndex: ['ChungCus', 'Ten'], key: 'chungcu' },
     {
-      title: 'Cư dân',
+      title: 'CÆ° dÃ¢n',
       key: 'resident',
       render: (_: unknown, record) => {
         const info = findResidentForInvoice(record);
@@ -199,20 +207,20 @@ const InvoicesPage = () => {
       }
     },
     {
-      title: 'Ngày lập',
+      title: 'NgÃ y láº­p',
       dataIndex: 'NgayLap',
       key: 'NgayLap',
       render: (value: string) => dayjs(value).format('DD/MM/YYYY')
     },
     {
-      title: 'Ngày thực hiện',
+      title: 'NgÃ y thá»±c hiá»‡n',
       dataIndex: 'NgayThucHien',
       key: 'NgayThucHien',
       render: (_: unknown, record) => {
         const text = record.NgayThucHien
           ? dayjs(record.NgayThucHien).format('DD/MM/YYYY')
           : record.TrangThai === 'Chua thanh toan'
-          ? 'Ban quản lý đang duyệt'
+          ? 'Ban quáº£n lÃ½ Ä‘ang duyá»‡t'
           : '-';
 
         if (!isManager) {
@@ -233,14 +241,14 @@ const InvoicesPage = () => {
                 fontWeight: 500
               }}
             >
-              Cập nhật
+              Cáº­p nháº­t
             </Button>
           </Space>
         );
       }
     },
     {
-      title: 'Hình thức thanh toán',
+      title: 'HÃ¬nh thá»©c thanh toÃ¡n',
       dataIndex: 'HinhThucThanhToan',
       key: 'HinhThucThanhToan',
       render: (value: string | undefined, record) => {
@@ -263,26 +271,26 @@ const InvoicesPage = () => {
                 fontWeight: 500
               }}
             >
-              Cập nhật
+              Cáº­p nháº­t
             </Button>
           </Space>
         );
       }
     },
     {
-      title: 'Số tiền',
+      title: 'Sá»‘ tiá»n',
       dataIndex: 'SoTien',
       key: 'SoTien',
-      render: (value: number) => <Tag color="blue">{value.toLocaleString('vi-VN')} ₫</Tag>
+      render: (value: number) => <Tag color="blue">{value.toLocaleString('vi-VN')} â‚«</Tag>
     },
     {
-      title: 'Dịch vụ',
+      title: 'Dá»‹ch vá»¥',
       dataIndex: 'HoaDonDichVu_DichVus',
       key: 'services',
       render: (_: unknown, record) => renderServicesText(record)
     },
     {
-      title: 'Trạng thái',
+      title: 'Tráº¡ng thÃ¡i',
       dataIndex: 'TrangThai',
       key: 'TrangThai',
       render: (value: string, record) => {
@@ -316,7 +324,7 @@ const InvoicesPage = () => {
     ...(isManager
       ? [
           {
-            title: 'Phiếu thu',
+            title: 'Phiáº¿u thu',
             key: 'receipt',
             render: (_: unknown, record: Invoice) => (
               <div
@@ -338,7 +346,7 @@ const InvoicesPage = () => {
                     fontWeight: 500
                   }}
                 >
-                  Xem phiếu thu
+                  Xem phiáº¿u thu
                 </Button>
               </div>
             )
@@ -347,7 +355,7 @@ const InvoicesPage = () => {
       : [])
   ];
 
-  const renderResidentView = () => {
+  const renderResidentView = (data: Invoice[]) => {
     if (loading) {
       return (
         <Row gutter={[16, 16]}>
@@ -360,13 +368,13 @@ const InvoicesPage = () => {
       );
     }
 
-    if (!invoices.length) {
-      return <Empty description="Chưa có hóa đơn nào" />;
+    if (!data.length) {
+      return <Empty description="ChÆ°a cÃ³ hÃ³a Ä‘Æ¡n nÃ o" />;
     }
 
     return (
       <Row gutter={[16, 16]}>
-        {invoices.map((invoice) => {
+        {data.map((invoice) => {
           const statusMeta = statusOptions.find((s) => s.value === invoice.TrangThai);
 
           return (
@@ -400,7 +408,7 @@ const InvoicesPage = () => {
                       }}
                     >
                       <Typography.Title level={4} style={{ margin: 0 }}>
-                        Hóa đơn dịch vụ căn hộ {invoice.CanHos?.MaCan ?? '---'}
+                        HÃ³a Ä‘Æ¡n dá»‹ch vá»¥ cÄƒn há»™ {invoice.CanHos?.MaCan ?? '---'}
                       </Typography.Title>
                       <Tag
                         color={statusMeta?.color ?? 'blue'}
@@ -411,7 +419,7 @@ const InvoicesPage = () => {
                     </div>
 
                     <Typography.Text type="secondary">
-                      Chung cư{' '}
+                      Chung cÆ°{' '}
                       <Typography.Text strong>
                         {invoice.ChungCus?.Ten ?? '---'}
                       </Typography.Text>
@@ -421,22 +429,22 @@ const InvoicesPage = () => {
                       level={3}
                       style={{ margin: 4, color: '#047857', fontWeight: 700 }}
                     >
-                      {invoice.SoTien.toLocaleString('vi-VN')} ₫
+                      {invoice.SoTien.toLocaleString('vi-VN')} â‚«
                     </Typography.Title>
 
                     <Typography.Text type="secondary">
-                      Ngày lập: {dayjs(invoice.NgayLap).format('DD/MM/YYYY')}
+                      NgÃ y láº­p: {dayjs(invoice.NgayLap).format('DD/MM/YYYY')}
                     </Typography.Text>
                     <Typography.Text type="secondary">
-                      Ngày thực hiện:{' '}
+                      NgÃ y thá»±c hiá»‡n:{' '}
                       {invoice.NgayThucHien
                         ? dayjs(invoice.NgayThucHien).format('DD/MM/YYYY')
                         : invoice.TrangThai === 'Chua thanh toan'
-                        ? 'Ban quản lý đang duyệt'
+                        ? 'Ban quáº£n lÃ½ Ä‘ang duyá»‡t'
                         : '-'}
                     </Typography.Text>
                     <Typography.Text type="secondary">
-                      Hình thức thanh toán: {renderPaymentMethod(invoice.HinhThucThanhToan)}
+                      HÃ¬nh thá»©c thanh toÃ¡n: {renderPaymentMethod(invoice.HinhThucThanhToan)}
                     </Typography.Text>
 
                     <div
@@ -449,10 +457,10 @@ const InvoicesPage = () => {
                       }}
                     >
                       <Typography.Paragraph style={{ marginBottom: 4 }}>
-                        <strong>Cư dân:</strong> {user?.hoTen} ({user?.email})
+                        <strong>CÆ° dÃ¢n:</strong> {user?.hoTen} ({user?.email})
                       </Typography.Paragraph>
                       <Typography.Paragraph style={{ marginBottom: 4 }}>
-                        <strong>Dịch vụ:</strong> {renderServicesText(invoice)}
+                        <strong>Dá»‹ch vá»¥:</strong> {renderServicesText(invoice)}
                       </Typography.Paragraph>
                     </div>
 
@@ -468,7 +476,7 @@ const InvoicesPage = () => {
                         fontWeight: 500
                       }}
                     >
-                      Xem phiếu thu
+                      Xem phiáº¿u thu
                     </Button>
                   </Space>
                 </Card>
@@ -489,7 +497,7 @@ const InvoicesPage = () => {
         open={receiptOpen}
         onCancel={() => setReceiptOpen(false)}
         footer={null}
-        title="Phiếu thu dịch vụ"
+        title="Phiáº¿u thu dá»‹ch vá»¥"
         width={640}
       >
         <div
@@ -502,46 +510,46 @@ const InvoicesPage = () => {
           }}
         >
           <Typography.Title level={4} style={{ textAlign: 'center', marginTop: 0 }}>
-            PHIẾU THU DỊCH VỤ
+            PHIáº¾U THU Dá»ŠCH Vá»¤
           </Typography.Title>
           <Typography.Paragraph style={{ textAlign: 'center', marginBottom: 16 }}>
-            Ngày xuất phiếu:{' '}
+            NgÃ y xuáº¥t phiáº¿u:{' '}
             <strong>{dayjs(receipt.NgayXuat).format('DD/MM/YYYY HH:mm')}</strong>
           </Typography.Paragraph>
 
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
             <Typography.Paragraph>
-              <strong>Căn hộ:</strong> {inv?.CanHos?.MaCan ?? '---'}
+              <strong>CÄƒn há»™:</strong> {inv?.CanHos?.MaCan ?? '---'}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Chung cư:</strong> {inv?.ChungCus?.Ten ?? '---'}
+              <strong>Chung cÆ°:</strong> {inv?.ChungCus?.Ten ?? '---'}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Cư dân:</strong>{' '}
+              <strong>CÆ° dÃ¢n:</strong>{' '}
               {receipt.Resident?.NguoiDungs
                 ? `${receipt.Resident.NguoiDungs.HoTen} (${receipt.Resident.NguoiDungs.Email})`
                 : '---'}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Dịch vụ:</strong> {renderServicesText(inv)}
+              <strong>Dá»‹ch vá»¥:</strong> {renderServicesText(inv)}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Số tiền:</strong> {inv?.SoTien.toLocaleString('vi-VN')} ₫
+              <strong>Sá»‘ tiá»n:</strong> {inv?.SoTien.toLocaleString('vi-VN')} â‚«
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Ngày lập hóa đơn:</strong>{' '}
+              <strong>NgÃ y láº­p hÃ³a Ä‘Æ¡n:</strong>{' '}
               {inv ? dayjs(inv.NgayLap).format('DD/MM/YYYY') : '-'}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Ngày thực hiện:</strong>{' '}
+              <strong>NgÃ y thá»±c hiá»‡n:</strong>{' '}
               {inv?.NgayThucHien ? dayjs(inv.NgayThucHien).format('DD/MM/YYYY') : '-'}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Hình thức thanh toán:</strong>{' '}
-              {inv ? renderPaymentMethod(inv.HinhThucThanhToan) : 'Chưa thiết lập'}
+              <strong>HÃ¬nh thá»©c thanh toÃ¡n:</strong>{' '}
+              {inv ? renderPaymentMethod(inv.HinhThucThanhToan) : 'ChÆ°a thiáº¿t láº­p'}
             </Typography.Paragraph>
             <Typography.Paragraph>
-              <strong>Người xuất phiếu:</strong> {receipt.NguoiDungs?.HoTen} (
+              <strong>NgÆ°á»i xuáº¥t phiáº¿u:</strong> {receipt.NguoiDungs?.HoTen} (
               {receipt.NguoiDungs?.Email})
             </Typography.Paragraph>
           </Space>
@@ -559,7 +567,7 @@ const InvoicesPage = () => {
                 window.print();
               }}
             >
-              Tải PDF
+              Táº£i PDF
             </Button>
             <Button
               type="primary"
@@ -567,7 +575,7 @@ const InvoicesPage = () => {
                 window.print();
               }}
             >
-              In phiếu thu
+              In phiáº¿u thu
             </Button>
           </div>
         </div>
@@ -582,15 +590,28 @@ const InvoicesPage = () => {
           <div className="page-header">
             <div>
               <Typography.Title level={3} style={{ margin: 0 }}>
-                Hóa đơn hộ gia đình
+                HÃ³a Ä‘Æ¡n há»™ gia Ä‘Ã¬nh
               </Typography.Title>
               <Typography.Text type="secondary">
-                Theo dõi trạng thái thanh toán cho căn hộ bạn đang sinh sống.
+                Theo dÃµi tráº¡ng thÃ¡i thanh toÃ¡n cho cÄƒn há»™ báº¡n Ä‘ang sinh sá»‘ng.
               </Typography.Text>
             </div>
-            <Button onClick={() => void loadInvoices()}>Tải lại</Button>
+            <Button onClick={() => void loadInvoices()}>Táº£i láº¡i</Button>
           </div>
-          {renderResidentView()}
+          <Tabs
+            items={[
+              {
+                key: 'unpaid',
+                label: `Chua thanh toán (${unpaidInvoices.length})`,
+                children: renderResidentView(unpaidInvoices)
+              },
+              {
+                key: 'paid',
+                label: `Ðã thanh toán (${paidInvoices.length})`,
+                children: renderResidentView(paidInvoices)
+              }
+            ]}
+          />
         </Space>
         {renderReceiptModal()}
       </>
@@ -602,18 +623,47 @@ const InvoicesPage = () => {
       <div className="page-header">
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Hóa đơn dịch vụ
+            HÃ³a Ä‘Æ¡n dá»‹ch vá»¥
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi chi tiết phí dịch vụ, ngày thực hiện, hình thức thanh toán và tình trạng thanh
-            toán.
+            Theo dÃµi chi tiáº¿t phÃ­ dá»‹ch vá»¥, ngÃ y thá»±c hiá»‡n, hÃ¬nh thá»©c thanh toÃ¡n vÃ  tÃ¬nh tráº¡ng thanh
+            toÃ¡n.
           </Typography.Text>
         </div>
         <Space>
-          <Button onClick={() => void loadInvoices()}>Tải lại</Button>
+          <Button onClick={() => void loadInvoices()}>Táº£i láº¡i</Button>
         </Space>
       </div>
-      <Table rowKey="ID" loading={loading} dataSource={invoices} columns={columns} bordered />
+      <Tabs
+        items={[
+          {
+            key: 'unpaid',
+            label: `Chua thanh toán (${unpaidInvoices.length})`,
+            children: (
+              <Table
+                rowKey="ID"
+                loading={loading}
+                dataSource={unpaidInvoices}
+                columns={columns}
+                bordered
+              />
+            )
+          },
+          {
+            key: 'paid',
+            label: `Ðã thanh toán (${paidInvoices.length})`,
+            children: (
+              <Table
+                rowKey="ID"
+                loading={loading}
+                dataSource={paidInvoices}
+                columns={columns}
+                bordered
+              />
+            )
+          }
+        ]}
+      />
       {renderReceiptModal()}
       <Modal
         open={metaModalOpen}
@@ -621,22 +671,22 @@ const InvoicesPage = () => {
         onOk={() => {
           void handleUpdateMeta();
         }}
-        okText="Lưu"
-        cancelText="Huỷ"
-        title="Cập nhật ngày thực hiện / hình thức thanh toán"
+        okText="LÆ°u"
+        cancelText="Huá»·"
+        title="Cáº­p nháº­t ngÃ y thá»±c hiá»‡n / hÃ¬nh thá»©c thanh toÃ¡n"
       >
         <Space className="meta-modal-body" direction="vertical" size={12} style={{ width: '100%' }}>
-          <Typography.Text>Ngày thực hiện:</Typography.Text>
+          <Typography.Text>NgÃ y thá»±c hiá»‡n:</Typography.Text>
           <DatePicker
             value={executionDate}
             onChange={(value) => setExecutionDate(value)}
             format="DD/MM/YYYY"
             style={{ width: '100%' }}
           />
-          <Typography.Text>Hình thức thanh toán:</Typography.Text>
+          <Typography.Text>HÃ¬nh thá»©c thanh toÃ¡n:</Typography.Text>
           <Select
             allowClear
-            placeholder="Chọn hình thức thanh toán"
+            placeholder="Chá»n hÃ¬nh thá»©c thanh toÃ¡n"
             options={paymentMethodOptions}
             value={paymentMethod}
             onChange={(val) => setPaymentMethod(val)}
@@ -650,4 +700,11 @@ const InvoicesPage = () => {
 };
 
 export default InvoicesPage;
+
+
+
+
+
+
+
 
