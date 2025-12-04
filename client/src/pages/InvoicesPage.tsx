@@ -1,6 +1,6 @@
-import { Badge, Button, Card, Col, Empty, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { Badge, Button, Card, Col, DatePicker, Empty, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import type { Invoice, Resident } from '../types';
@@ -9,6 +9,12 @@ import { useAuthStore } from '../store/useAuthStore';
 const statusOptions = [
   { label: 'Chưa thanh toán', value: 'Chua thanh toan', color: 'red' },
   { label: 'Đã thanh toán', value: 'Da thanh toan', color: 'green' }
+];
+
+const paymentMethodOptions = [
+  { label: 'Tiền mặt', value: 'Tien mat' },
+  { label: 'Chuyển khoản', value: 'Chuyen khoan' },
+  { label: 'Ví điện tử', value: 'Vi dien tu' }
 ];
 
 interface Receipt {
@@ -22,6 +28,14 @@ interface Receipt {
   HoaDonDichVus?: Invoice & {
     HoaDonDichVu_DichVus?: { DichVus: { TenDichVu: string } }[];
   };
+  Resident?: {
+    ID: number;
+    LaChuHo?: boolean;
+    NguoiDungs?: {
+      HoTen: string;
+      Email: string;
+    };
+  } | null;
 }
 
 const InvoicesPage = () => {
@@ -31,6 +45,10 @@ const InvoicesPage = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [executionDate, setExecutionDate] = useState<Dayjs | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | undefined>();
+  const [metaModalOpen, setMetaModalOpen] = useState(false);
 
   const { user } = useAuthStore();
   const isManager = user?.role === 'Ban quan ly';
@@ -38,7 +56,7 @@ const InvoicesPage = () => {
   const loadInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/invoices');
+      const { data } = await api.get<Invoice[]>('/invoices');
       setInvoices(data);
     } finally {
       setLoading(false);
@@ -56,7 +74,7 @@ const InvoicesPage = () => {
         const { data } = await api.get<Resident[]>('/residents');
         setResidents(data);
       } catch {
-        // ignore error for admin helper info
+        // ignore
       }
     };
     void loadResidents();
@@ -93,6 +111,70 @@ const InvoicesPage = () => {
     }
   };
 
+  const findResidentForInvoice = (invoice: Invoice) => {
+    if (!residents.length) return undefined;
+
+    const owner =
+      residents.find(
+        (r) =>
+          r.ID_CanHo === invoice.ID_CanHo &&
+          r.ID_ChungCu === invoice.ID_ChungCu &&
+          r.LaChuHo
+      ) ??
+      residents.find(
+        (r) => r.ID_CanHo === invoice.ID_CanHo && r.ID_ChungCu === invoice.ID_ChungCu
+      );
+
+    return owner?.NguoiDungs;
+  };
+
+  const openMetaModal = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setExecutionDate(invoice.NgayThucHien ? dayjs(invoice.NgayThucHien) : dayjs(invoice.NgayLap));
+    setPaymentMethod(invoice.HinhThucThanhToan);
+    setMetaModalOpen(true);
+  };
+
+  const handleUpdateMeta = async () => {
+    if (!editingInvoice) {
+      setMetaModalOpen(false);
+      return;
+    }
+
+    try {
+      const body: {
+        status: Invoice['TrangThai'];
+        ngayThucHien?: string;
+        hinhThucThanhToan?: string;
+      } = {
+        status: editingInvoice.TrangThai
+      };
+
+      if (executionDate) {
+        body.ngayThucHien = executionDate.toISOString();
+      }
+
+      if (paymentMethod) {
+        body.hinhThucThanhToan = paymentMethod;
+      }
+
+      await api.patch(`/invoices/${editingInvoice.ID}/status`, body);
+      message.success('Đã cập nhật ngày thực hiện / hình thức thanh toán');
+      setMetaModalOpen(false);
+      await loadInvoices();
+    } catch (err: any) {
+      message.error(
+        err.response?.data?.message ?? 'Không thể cập nhật ngày thực hiện / hình thức thanh toán'
+      );
+    }
+  };
+
+  const renderPaymentMethod = (value?: string) => {
+    if (!value) return 'Chưa thiết lập';
+    const found = paymentMethodOptions.find((p) => p.value === value);
+    return found?.label ?? value;
+  };
+
   const renderServicesText = (invoice: Invoice | Receipt['HoaDonDichVus']) => {
     const list = invoice?.HoaDonDichVu_DichVus;
     if (!list || !list.length) {
@@ -108,6 +190,15 @@ const InvoicesPage = () => {
     { title: 'Căn hộ', dataIndex: ['CanHos', 'MaCan'], key: 'canho' },
     { title: 'Chung cư', dataIndex: ['ChungCus', 'Ten'], key: 'chungcu' },
     {
+      title: 'Cư dân',
+      key: 'resident',
+      render: (_: unknown, record) => {
+        const info = findResidentForInvoice(record);
+        if (!info) return '---';
+        return `${info.HoTen} (${info.Email})`;
+      }
+    },
+    {
       title: 'Ngày lập',
       dataIndex: 'NgayLap',
       key: 'NgayLap',
@@ -117,12 +208,66 @@ const InvoicesPage = () => {
       title: 'Ngày thực hiện',
       dataIndex: 'NgayThucHien',
       key: 'NgayThucHien',
-      render: (_: unknown, record) =>
-        record.NgayThucHien
+      render: (_: unknown, record) => {
+        const text = record.NgayThucHien
           ? dayjs(record.NgayThucHien).format('DD/MM/YYYY')
           : record.TrangThai === 'Chua thanh toan'
           ? 'Ban quản lý đang duyệt'
-          : '-'
+          : '-';
+
+        if (!isManager) {
+          return text;
+        }
+
+        return (
+          <Space>
+            <span>{text}</span>
+            <Button
+              size="small"
+              onClick={() => openMetaModal(record)}
+              style={{
+                backgroundColor: '#fb923c',
+                borderColor: '#f97316',
+                color: '#ffffff',
+                borderRadius: 999,
+                fontWeight: 500
+              }}
+            >
+              Cập nhật
+            </Button>
+          </Space>
+        );
+      }
+    },
+    {
+      title: 'Hình thức thanh toán',
+      dataIndex: 'HinhThucThanhToan',
+      key: 'HinhThucThanhToan',
+      render: (value: string | undefined, record) => {
+        const text = renderPaymentMethod(value);
+        if (!isManager) {
+          return text;
+        }
+
+        return (
+          <Space>
+            <span>{text}</span>
+            <Button
+              size="small"
+              onClick={() => openMetaModal(record)}
+              style={{
+                backgroundColor: '#fb923c',
+                borderColor: '#f97316',
+                color: '#ffffff',
+                borderRadius: 999,
+                fontWeight: 500
+              }}
+            >
+              Cập nhật
+            </Button>
+          </Space>
+        );
+      }
     },
     {
       title: 'Số tiền',
@@ -140,20 +285,33 @@ const InvoicesPage = () => {
       title: 'Trạng thái',
       dataIndex: 'TrangThai',
       key: 'TrangThai',
-      render: (value: string, record) =>
-        isManager ? (
-          <Select
-            value={value}
-            options={statusOptions}
-            onChange={(status) => handleStatusChange(record, status as Invoice['TrangThai'])}
-            style={{ width: 160 }}
-          />
-        ) : (
+      render: (value: string, record) => {
+        const meta = statusOptions.find((s) => s.value === value);
+
+        if (isManager) {
+          const isUnpaid = value === 'Chua thanh toan';
+          const className = `status-select ${
+            isUnpaid ? 'status-select-unpaid' : 'status-select-paid'
+          }`;
+
+          return (
+            <Select
+              className={className}
+              value={value}
+              options={statusOptions}
+              onChange={(status) => handleStatusChange(record, status as Invoice['TrangThai'])}
+              style={{ width: 180 }}
+            />
+          );
+        }
+
+        return (
           <Badge
-            color={statusOptions.find((s) => s.value === value)?.color}
-            text={statusOptions.find((s) => s.value === value)?.label ?? value}
+            color={meta?.color}
+            text={meta?.label ?? value}
           />
-        )
+        );
+      }
     },
     ...(isManager
       ? [
@@ -161,9 +319,28 @@ const InvoicesPage = () => {
             title: 'Phiếu thu',
             key: 'receipt',
             render: (_: unknown, record: Invoice) => (
-              <Button size="small" onClick={() => void handleViewReceipt(record.ID)}>
-                Xem phiếu thu
-              </Button>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  padding: '4px 0',
+                  backgroundColor: '#ffffff'
+                }}
+              >
+                <Button
+                  size="small"
+                  onClick={() => void handleViewReceipt(record.ID)}
+                  style={{
+                    backgroundColor: '#facc15',
+                    borderColor: '#eab308',
+                    color: '#422006',
+                    borderRadius: 999,
+                    fontWeight: 500
+                  }}
+                >
+                  Xem phiếu thu
+                </Button>
+              </div>
             )
           } as ColumnsType<Invoice>[number]
         ]
@@ -258,6 +435,9 @@ const InvoicesPage = () => {
                         ? 'Ban quản lý đang duyệt'
                         : '-'}
                     </Typography.Text>
+                    <Typography.Text type="secondary">
+                      Hình thức thanh toán: {renderPaymentMethod(invoice.HinhThucThanhToan)}
+                    </Typography.Text>
 
                     <div
                       style={{
@@ -280,6 +460,13 @@ const InvoicesPage = () => {
                       size="small"
                       onClick={() => void handleViewReceipt(invoice.ID)}
                       disabled={invoice.TrangThai !== 'Da thanh toan'}
+                      style={{
+                        backgroundColor: '#facc15',
+                        borderColor: '#eab308',
+                        color: '#422006',
+                        borderRadius: 999,
+                        fontWeight: 500
+                      }}
                     >
                       Xem phiếu thu
                     </Button>
@@ -306,6 +493,7 @@ const InvoicesPage = () => {
         width={640}
       >
         <div
+          className="receipt-print-area"
           style={{
             border: '1px solid #e5e7eb',
             borderRadius: 16,
@@ -329,6 +517,12 @@ const InvoicesPage = () => {
               <strong>Chung cư:</strong> {inv?.ChungCus?.Ten ?? '---'}
             </Typography.Paragraph>
             <Typography.Paragraph>
+              <strong>Cư dân:</strong>{' '}
+              {receipt.Resident?.NguoiDungs
+                ? `${receipt.Resident.NguoiDungs.HoTen} (${receipt.Resident.NguoiDungs.Email})`
+                : '---'}
+            </Typography.Paragraph>
+            <Typography.Paragraph>
               <strong>Dịch vụ:</strong> {renderServicesText(inv)}
             </Typography.Paragraph>
             <Typography.Paragraph>
@@ -343,19 +537,37 @@ const InvoicesPage = () => {
               {inv?.NgayThucHien ? dayjs(inv.NgayThucHien).format('DD/MM/YYYY') : '-'}
             </Typography.Paragraph>
             <Typography.Paragraph>
+              <strong>Hình thức thanh toán:</strong>{' '}
+              {inv ? renderPaymentMethod(inv.HinhThucThanhToan) : 'Chưa thiết lập'}
+            </Typography.Paragraph>
+            <Typography.Paragraph>
               <strong>Người xuất phiếu:</strong> {receipt.NguoiDungs?.HoTen} (
               {receipt.NguoiDungs?.Email})
             </Typography.Paragraph>
           </Space>
 
-          <div style={{ marginTop: 16, textAlign: 'right' }}>
+          <div
+            style={{
+              marginTop: 16,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 8
+            }}
+          >
+            <Button
+              onClick={() => {
+                window.print();
+              }}
+            >
+              Tải PDF
+            </Button>
             <Button
               type="primary"
               onClick={() => {
                 window.print();
               }}
             >
-              In / Tải phiếu thu
+              In phiếu thu
             </Button>
           </div>
         </div>
@@ -373,7 +585,7 @@ const InvoicesPage = () => {
                 Hóa đơn hộ gia đình
               </Typography.Title>
               <Typography.Text type="secondary">
-                Theo dõi trạng thái thanh toán của căn hộ bạn đang sinh sống.
+                Theo dõi trạng thái thanh toán cho căn hộ bạn đang sinh sống.
               </Typography.Text>
             </div>
             <Button onClick={() => void loadInvoices()}>Tải lại</Button>
@@ -393,7 +605,8 @@ const InvoicesPage = () => {
             Hóa đơn dịch vụ
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi chi tiết phí dịch vụ, ngày thực hiện và tình trạng thanh toán.
+            Theo dõi chi tiết phí dịch vụ, ngày thực hiện, hình thức thanh toán và tình trạng thanh
+            toán.
           </Typography.Text>
         </div>
         <Space>
@@ -402,9 +615,39 @@ const InvoicesPage = () => {
       </div>
       <Table rowKey="ID" loading={loading} dataSource={invoices} columns={columns} bordered />
       {renderReceiptModal()}
+      <Modal
+        open={metaModalOpen}
+        onCancel={() => setMetaModalOpen(false)}
+        onOk={() => {
+          void handleUpdateMeta();
+        }}
+        okText="Lưu"
+        cancelText="Huỷ"
+        title="Cập nhật ngày thực hiện / hình thức thanh toán"
+      >
+        <Space className="meta-modal-body" direction="vertical" size={12} style={{ width: '100%' }}>
+          <Typography.Text>Ngày thực hiện:</Typography.Text>
+          <DatePicker
+            value={executionDate}
+            onChange={(value) => setExecutionDate(value)}
+            format="DD/MM/YYYY"
+            style={{ width: '100%' }}
+          />
+          <Typography.Text>Hình thức thanh toán:</Typography.Text>
+          <Select
+            allowClear
+            placeholder="Chọn hình thức thanh toán"
+            options={paymentMethodOptions}
+            value={paymentMethod}
+            onChange={(val) => setPaymentMethod(val)}
+            style={{ width: '100%' }}
+          />
+        </Space>
+      </Modal>
       {receiptLoading && <div />}
     </>
   );
 };
 
 export default InvoicesPage;
+

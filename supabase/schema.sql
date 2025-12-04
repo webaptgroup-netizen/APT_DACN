@@ -83,7 +83,8 @@ create table if not exists "HoaDonDichVus" (
   "SoTien" numeric(18,2) not null,
   "NgayLap" timestamptz not null default now(),
   "TrangThai" text not null default 'Chua thanh toan' check ("TrangThai" in ('Chua thanh toan','Da thanh toan')),
-  "NgayThucHien" timestamptz
+  "NgayThucHien" timestamptz,
+  "HinhThucThanhToan" text
 );
 
 create table if not exists "HoaDonDichVu_DichVus" (

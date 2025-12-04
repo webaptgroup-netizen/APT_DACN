@@ -1,0 +1,120 @@
+import {
+  App as AntdApp,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Row,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  Upload,
+  Image
+} from 'antd';
+import type { UploadProps } from 'antd';
+import { useCallback, useEffect, useState } from 'react';
+import api from '../api/client';
+import type { Service } from '../types';
+import { useAuthStore } from '../store/useAuthStore';
+
+const ServicesPage = () => {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form] = Form.useForm();
+  const { user } = useAuthStore();
+  const { message } = AntdApp.useApp();
+  const isManager = user?.role === 'Ban quan ly';
+
+  // ?? Load danh sách d?ch v?
+  const loadServices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/services');
+      setServices(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadServices();
+  }, [loadServices]);
+
+  // ?? Thêm m?i d?ch v?
+  const handleSubmit = async () => {
+    const values = await form.validateFields();
+    try {
+      await api.post('/services', values);
+      message.success('Ðã luu d?ch v?');
+      setModalOpen(false);
+      form.resetFields();
+      await loadServices();
+    } catch (err: any) {
+      message.error(err.response?.data?.message ?? 'Không th? luu d?ch v?');
+    }
+  };
+
+  // ? Xóa d?ch v?
+  const handleDelete = async (service: Service) => {
+    try {
+      await api.delete(`/services/${service.ID}`);
+      message.success('Ðã xóa d?ch v?');
+      await loadServices();
+    } catch (err: any) {
+      message.error(err.response?.data?.message ?? 'Không th? xóa d?ch v?');
+    }
+  };
+
+  // ?? Cu dân dang ký d?ch v?
+  const handleRegister = async (id: number) => {
+    try {
+      await api.post(`/services/${id}/register`);
+      message.success('Ðang ký d?ch v? thành công. Vui lòng ki?m tra hóa don.');
+    } catch (err: any) {
+      message.error(err.response?.data?.message ?? 'Không th? dang ký d?ch v?');
+    }
+  };
+
+  // ??? Upload ?nh lên Supabase
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const uploadProps: UploadProps = {
+    showUploadList: false,
+    beforeUpload: async (file) => {
+      const dataUrl = await fileToBase64(file);
+      const { data } = await api.post('/storage/upload', {
+        base64: dataUrl,
+        folder: 'DICHVU',
+        fileName: file.name
+      });
+      form.setFieldsValue({ HinhAnh: data.url });
+      message.success('Ðã t?i ?nh lên Supabase');
+      return false;
+    }
+  };
+
+  // ?? Hi?n th? giao di?n cu dân
+  const renderResidentView = () => {
+    if (loading) {
+      return (
+        <Row gutter={[16, 16]}>
+          {[1, 2, 3].map((idx) => (
+            <Col xs={24} md={12} xl={8} key={idx}>
+              <Card loading style={{ borderRadius: 20, height: '100%' }} />
+            </Col>
+          ))}
+        </Row>
+      );

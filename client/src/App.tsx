@@ -2,7 +2,6 @@ import { App as AntdApp, ConfigProvider } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import './App.css';
-import ChatbotWidget from './components/ChatbotWidget';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layouts/DashboardLayout';
 import ApartmentsPage from './pages/ApartmentsPage';
@@ -12,10 +11,15 @@ import DashboardPage from './pages/Dashboard';
 import InvoicesPage from './pages/InvoicesPage';
 import LoginPage from './pages/Login';
 import NewsPage from './pages/NewsPage';
+import InteriorDesignerPage from './pages/InteriorDesignerPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/Register';
 import ServicesPage from './pages/ServicesPage';
 import ResidentsPage from './pages/ResidentsPage';
+import UsersPage from './pages/UsersPage';
+import BuildingDetailPage from './pages/BuildingDetailPage';
+import ApartmentDetailPage from './pages/ApartmentDetailPage';
+import ChatPanel from './components/ChatPanel';
 
 const router = createBrowserRouter([
   {
@@ -29,12 +33,16 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'buildings', element: <BuildingsPage /> },
+      { path: 'buildings/:id', element: <BuildingDetailPage /> },
       { path: 'apartments', element: <ApartmentsPage /> },
+      { path: 'apartments/:id', element: <ApartmentDetailPage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'residents', element: <ResidentsPage /> },
+      { path: 'users', element: <UsersPage /> },
       { path: 'invoices', element: <InvoicesPage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'complaints', element: <ComplaintsPage /> },
+      { path: 'interior', element: <InteriorDesignerPage /> },
       { path: 'profile', element: <ProfilePage /> }
     ]
   },
@@ -53,16 +61,24 @@ function App() {
         },
         components: {
           Layout: {
-            headerBg: '#ffffff',
-            siderBg: '#0f172a',
-            bodyBg: '#f5f6fa'
+            headerBg: 'rgba(255,255,255,0.9)',
+            siderBg: 'rgba(15,23,42,0.96)',
+            bodyBg: 'transparent'
+          },
+          Card: {
+            colorBgContainer: 'rgba(255,255,255,0.85)',
+            borderRadiusLG: 20
+          },
+          Modal: {
+            colorBgElevated: 'rgba(255,255,255,0.9)',
+            borderRadiusLG: 18
           }
         }
       }}
     >
       <AntdApp>
         <RouterProvider router={router} />
-        <ChatbotWidget />
+        <ChatPanel />
       </AntdApp>
     </ConfigProvider>
   );

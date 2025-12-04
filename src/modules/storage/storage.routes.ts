@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth, requireRoles } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validateRequest';
-import { deleteFile, uploadBase64Image } from './storage.service';
+import { deleteFile, listThreeDAssets, uploadBase64Image } from './storage.service';
 
 const router = Router();
 
@@ -39,6 +39,15 @@ router.delete(
   asyncHandler(async (req, res) => {
     await deleteFile(req.body.path);
     res.json({ message: 'Deleted' });
+  })
+);
+
+router.get(
+  '/3d-assets',
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    const assets = await listThreeDAssets();
+    res.json(assets);
   })
 );
 

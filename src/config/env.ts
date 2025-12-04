@@ -16,7 +16,8 @@ const envSchema = z.object({
   EMAIL_USER: z.string().optional(),
   EMAIL_PASSWORD: z.string().optional(),
   N8N_WEBHOOK_URL: z.string().optional(),
-  OPENAI_API_KEY: z.string().optional()
+  OPENAI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);

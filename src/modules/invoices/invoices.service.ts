@@ -59,7 +59,13 @@ export const listInvoicesForResident = async (userId: number) => {
   return data;
 };
 
-export const updateInvoiceStatus = async (adminId: number, id: number, status: 'Chua thanh toan' | 'Da thanh toan', ngayThucHien?: string) => {
+export const updateInvoiceStatus = async (
+  adminId: number,
+  id: number,
+  status: 'Chua thanh toan' | 'Da thanh toan',
+  ngayThucHien?: string,
+  hinhThucThanhToan?: string
+) => {
   const { data: existing, error: fetchError } = await supabase
     .from(INVOICE_TABLE)
     .select('*')
@@ -77,6 +83,9 @@ export const updateInvoiceStatus = async (adminId: number, id: number, status: '
   const payload: Record<string, unknown> = { TrangThai: status };
   if (ngayThucHien) {
     payload.NgayThucHien = ngayThucHien;
+  }
+  if (typeof hinhThucThanhToan !== 'undefined') {
+    payload.HinhThucThanhToan = hinhThucThanhToan;
   }
 
   const { data, error } = await supabase
@@ -131,9 +140,12 @@ export const getInvoiceReceipt = async (invoiceId: number) => {
       ),
       HoaDonDichVus:ID_HoaDon (
         ID,
+        ID_CanHo,
+        ID_ChungCu,
         SoTien,
         NgayLap,
         NgayThucHien,
+        HinhThucThanhToan,
         TrangThai,
         CanHos ( MaCan ),
         ChungCus ( Ten ),
@@ -150,5 +162,65 @@ export const getInvoiceReceipt = async (invoiceId: number) => {
     throw new AppError('Failed to load receipt', 500, error);
   }
 
-  return data;
+  if (!data || !data.HoaDonDichVus) {
+    return data;
+  }
+
+  const invoice = data.HoaDonDichVus as {
+    ID_CanHo: number;
+    ID_ChungCu: number;
+  };
+
+  // Try to resolve resident (prefer apartment owner)
+  const { data: owner, error: ownerError } = await supabase
+    .from(RESIDENT_TABLE)
+    .select(
+      `
+      ID,
+      LaChuHo,
+      NguoiDungs (
+        HoTen,
+        Email
+      )
+    `
+    )
+    .eq('ID_CanHo', invoice.ID_CanHo)
+    .eq('ID_ChungCu', invoice.ID_ChungCu)
+    .eq('LaChuHo', true)
+    .maybeSingle();
+
+  if (ownerError) {
+    throw new AppError('Failed to load resident for receipt', 500, ownerError);
+  }
+
+  let resident = owner;
+
+  if (!resident) {
+    const { data: anyResident, error: anyError } = await supabase
+      .from(RESIDENT_TABLE)
+      .select(
+        `
+        ID,
+        LaChuHo,
+        NguoiDungs (
+          HoTen,
+          Email
+        )
+      `
+      )
+      .eq('ID_CanHo', invoice.ID_CanHo)
+      .eq('ID_ChungCu', invoice.ID_ChungCu)
+      .maybeSingle();
+
+    if (anyError) {
+      throw new AppError('Failed to load resident for receipt', 500, anyError);
+    }
+
+    resident = anyResident ?? undefined;
+  }
+
+  return {
+    ...data,
+    Resident: resident ?? null
+  };
 };

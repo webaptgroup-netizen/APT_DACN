@@ -27,7 +27,7 @@ const Uploader = ({ folder, onUploaded }: UploadProps) => {
     onUploaded(data.url);
   };
 
-  return <input type="file" accept="image/*" onChange={handleChange} />;
+  return <input type="file" accept="image/*,video/*" onChange={handleChange} />;
 };
 
 export default Uploader;

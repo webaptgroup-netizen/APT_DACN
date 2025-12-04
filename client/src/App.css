@@ -48,6 +48,35 @@
   color: #98a2b3;
 }
 
+/* Luôn cho bảng Ant Design nền trắng (không trong suốt, kể cả khi không hover) */
+.ant-table-wrapper .ant-table,
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td {
+  background-color: #ffffff;
+}
+
+/* Màu cho select trạng thái hóa đơn (Ban quản lý) */
+.status-select .ant-select-selector {
+  border-radius: 999px !important;
+  font-weight: 500;
+}
+
+.status-select-unpaid .ant-select-selector {
+  background-color: #fee2e2 !important; /* đỏ nhạt */
+  border-color: #ef4444 !important;
+  color: #b91c1c !important;
+}
+
+.status-select-paid .ant-select-selector {
+  background-color: #dcfce7 !important; /* xanh nhạt */
+  border-color: #22c55e !important;
+  color: #166534 !important;
+}
+
+.status-select .ant-select-arrow {
+  color: inherit;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -57,4 +86,23 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.meta-modal-body {
+  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(129, 140, 248, 0.5);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.meta-modal-body .ant-typography {
+  margin-bottom: 4px;
+}
+
+.meta-modal-body .ant-typography + .ant-picker,
+.meta-modal-body .ant-typography + .ant-select {
+  margin-top: 4px;
+  background-color: #ffffff;
+  border-radius: 10px;
 }

@@ -4,6 +4,7 @@ import { env } from '../../config/env';
 import { AppError } from '../../utils/appError';
 
 const bucket = env.SUPABASE_STORAGE_BUCKET;
+const publicStorageBaseUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${bucket}`;
 
 const guessExtension = (contentType?: string, fileName?: string) => {
   if (fileName && fileName.includes('.')) {
@@ -11,6 +12,7 @@ const guessExtension = (contentType?: string, fileName?: string) => {
   }
 
   switch (contentType) {
+    // Images
     case 'image/png':
       return 'png';
     case 'image/gif':
@@ -20,6 +22,15 @@ const guessExtension = (contentType?: string, fileName?: string) => {
     case 'image/jpeg':
     case 'image/jpg':
       return 'jpg';
+    // Videos
+    case 'video/mp4':
+      return 'mp4';
+    case 'video/webm':
+      return 'webm';
+    case 'video/ogg':
+      return 'ogv';
+    case 'video/quicktime':
+      return 'mov';
     default:
       return 'bin';
   }
@@ -91,4 +102,38 @@ export const deleteFile = async (path: string) => {
   if (error) {
     throw new AppError('Failed to delete file in Supabase Storage', 500, error);
   }
+};
+
+export interface ThreeDAsset {
+  name: string;
+  path: string;
+  url: string;
+}
+
+export const listThreeDAssets = async (): Promise<ThreeDAsset[]> => {
+  const { data, error } = await supabase.storage.from(bucket).list('3D', {
+    limit: 200,
+    sortBy: { column: 'name', order: 'asc' }
+  });
+
+  if (error) {
+    throw new AppError('Failed to list 3D assets', 500, error);
+  }
+
+  if (!data?.length) {
+    return [];
+  }
+
+  return data
+    .filter((item) => item.name.toLowerCase().endsWith('.glb'))
+    .map((item) => {
+      const path = `3D/${item.name}`;
+      const url = `${publicStorageBaseUrl}/${path}`;
+
+      return {
+        name: item.name,
+        path,
+        url
+      };
+    });
 };

@@ -1,6 +1,26 @@
-import { App as AntdApp, Button, Card, Col, Empty, Form, Input, InputNumber, Modal, Row, Select, Space, Table, Tag, Typography } from 'antd';
-import { ColumnsType } from 'antd/es/table';
+import {
+  App as AntdApp,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  Upload,
+  Carousel
+} from 'antd';
+import type { UploadProps } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import type { Apartment, Building } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -13,10 +33,12 @@ const statusOptions = [
 ];
 
 const ApartmentsPage = () => {
+  const navigate = useNavigate();
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Apartment | null>(null);
   const [form] = Form.useForm();
   const { user } = useAuthStore();
   const { message } = AntdApp.useApp();
@@ -47,52 +69,159 @@ const ApartmentsPage = () => {
     });
   }, [apartments, filters]);
 
+  const openModal = (record?: Apartment) => {
+    if (record) {
+      setEditing(record);
+      form.setFieldsValue({
+        MaCan: record.MaCan,
+        ID_ChungCu: record.ID_ChungCu,
+        DienTich: record.DienTich,
+        SoPhong: record.SoPhong,
+        Gia: record.Gia,
+        TrangThai: record.TrangThai,
+        MoTa: record.MoTa,
+        Model3DUrl: record.Model3DUrl,
+        URLs: record.URLs?.join(', ') ?? ''
+      });
+    } else {
+      setEditing(null);
+      form.resetFields();
+    }
+    setModalOpen(true);
+  };
+
   const handleSubmit = async () => {
     const values = await form.validateFields();
+    const payload = {
+      MaCan: values.MaCan,
+      ID_ChungCu: values.ID_ChungCu,
+      DienTich: values.DienTich,
+      SoPhong: values.SoPhong,
+      Gia: values.Gia,
+      TrangThai: values.TrangThai,
+      MoTa: values.MoTa,
+      Model3DUrl: values.Model3DUrl,
+      URLs: values.URLs ? values.URLs.split(',').map((url: string) => url.trim()) : []
+    };
+
     try {
-      await api.post('/apartments', {
-        ...values,
-        URLs: values.URLs ? values.URLs.split(',').map((url: string) => url.trim()) : []
-      });
-      message.success('Đã thêm căn hộ');
+      if (editing) {
+        await api.put(`/apartments/${editing.ID}`, payload);
+        message.success('Đã cập nhật căn hộ');
+      } else {
+        await api.post('/apartments', payload);
+        message.success('Đã thêm căn hộ');
+      }
       setModalOpen(false);
+      setEditing(null);
       form.resetFields();
       await loadData();
     } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể thêm căn hộ');
+      message.error(err.response?.data?.message ?? 'Không thể lưu căn hộ');
     }
   };
 
-  const columns: ColumnsType<Apartment> = [
-    { title: 'Mã căn', dataIndex: 'MaCan', key: 'MaCan' },
-    {
-      title: 'Chung cư',
-      dataIndex: 'ID_ChungCu',
-      key: 'ID_ChungCu',
-      render: (id: number) => buildings.find((b) => b.ID === id)?.Ten ?? '-'
-    },
-    {
-      title: 'Diện tích',
-      dataIndex: 'DienTich',
-      key: 'DienTich',
-      render: (val?: number) => (val ? `${val} m²` : '-')
-    },
-    {
-      title: 'Giá',
-      dataIndex: 'Gia',
-      key: 'Gia',
-      render: (val?: number) => (val ? `${val.toLocaleString('vi-VN')} đ` : '-')
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'TrangThai',
-      key: 'TrangThai',
-      render: (val: string) => {
-        const found = statusOptions.find((s) => s.value === val);
-        return <Tag color={found?.color}>{found?.label ?? val}</Tag>;
-      }
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const uploadProps: UploadProps = {
+    multiple: true,
+    showUploadList: false,
+    beforeUpload: async (file) => {
+      const dataUrl = await fileToBase64(file as File);
+      const { data } = await api.post('/storage/upload', {
+        base64: dataUrl,
+        folder: 'apartments',
+        fileName: file.name
+      });
+
+      const current: string = form.getFieldValue('URLs') || '';
+      const urls = current
+        .split(',')
+        .map((u) => u.trim())
+        .filter(Boolean);
+      urls.push(data.url);
+
+      form.setFieldsValue({ URLs: urls.join(', ') });
+      message.success('Đã tải ảnh căn hộ lên');
+
+      return false;
     }
-  ];
+  };
+
+  const columns: ColumnsType<Apartment> = useMemo(() => {
+    const base: ColumnsType<Apartment> = [
+      {
+        title: 'Hình ảnh',
+        dataIndex: 'URLs',
+        key: 'URLs',
+        width: 120,
+        render: (urls?: string[]) =>
+          urls && urls.length > 0 ? (
+            <img
+              src={urls[0]}
+              alt="Ảnh căn hộ"
+              style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 8 }}
+            />
+          ) : (
+            '-'
+          )
+      },
+      { title: 'Mã căn', dataIndex: 'MaCan', key: 'MaCan' },
+      {
+        title: 'Chung cư',
+        dataIndex: 'ID_ChungCu',
+        key: 'ID_ChungCu',
+        render: (id: number) => buildings.find((b) => b.ID === id)?.Ten ?? '-'
+      },
+      {
+        title: 'Diện tích',
+        dataIndex: 'DienTich',
+        key: 'DienTich',
+        render: (val?: number) => (val ? `${val} m²` : '-')
+      },
+      {
+        title: 'Giá',
+        dataIndex: 'Gia',
+        key: 'Gia',
+        render: (val?: number) => (val ? `${val.toLocaleString('vi-VN')} ₫` : '-')
+      },
+      {
+        title: 'Trạng thái',
+        dataIndex: 'TrangThai',
+        key: 'TrangThai',
+        render: (val: string) => {
+          const found = statusOptions.find((s) => s.value === val);
+          return <Tag color={found?.color}>{found?.label ?? val}</Tag>;
+        }
+      }
+    ];
+
+    if (isManager) {
+      base.push({
+        title: 'Thao tác',
+        key: 'actions',
+        fixed: 'right',
+        render: (_, record) => (
+          <Space>
+            <Button type="link" onClick={() => navigate(`/apartments/${record.ID}`)}>
+              Xem chi tiết
+            </Button>
+            <Button type="link" onClick={() => openModal(record)}>
+              Chỉnh sửa
+            </Button>
+          </Space>
+        )
+      });
+    }
+
+    return base;
+  }, [buildings, isManager, navigate]);
 
   const renderResidentView = () => {
     if (loading) {
@@ -118,7 +247,12 @@ const ApartmentsPage = () => {
           const statusMeta = statusOptions.find((s) => s.value === apt.TrangThai);
           return (
             <Col xs={24} md={12} xl={8} key={apt.ID}>
-              <Card style={{ borderRadius: 20, height: '100%' }} title={`${apt.MaCan} · ${buildingName}`}>
+              <Card
+                style={{ borderRadius: 20, height: '100%' }}
+                title={`${apt.MaCan} • ${buildingName}`}
+                hoverable
+                onClick={() => navigate(`/apartments/${apt.ID}`)}
+              >
                 <Space size="small" wrap>
                   <Tag color={statusMeta?.color}>{statusMeta?.label ?? apt.TrangThai}</Tag>
                   {apt.DienTich && <Tag>{apt.DienTich} m²</Tag>}
@@ -126,11 +260,22 @@ const ApartmentsPage = () => {
                 </Space>
                 {apt.URLs && apt.URLs.length > 0 && (
                   <div style={{ marginTop: 12 }}>
-                    <img
-                      src={apt.URLs[0]}
-                      alt="Ảnh căn hộ"
-                      style={{ width: '100%', borderRadius: 12, maxHeight: 220, objectFit: 'cover' }}
-                    />
+                    <Carousel dots autoplay autoplaySpeed={3000} pauseOnHover={false}>
+                      {apt.URLs.map((url, index) => (
+                        <div key={index}>
+                          <img
+                            src={url}
+                            alt="Ảnh căn hộ"
+                            style={{
+                              width: '100%',
+                              borderRadius: 12,
+                              maxHeight: 220,
+                              objectFit: 'cover'
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </Carousel>
                   </div>
                 )}
                 <Typography.Paragraph style={{ marginTop: 12 }}>
@@ -206,32 +351,37 @@ const ApartmentsPage = () => {
           </Space>
         </Space>
         {isManager && (
-          <Button type="primary" onClick={() => setModalOpen(true)}>
+          <Button type="primary" onClick={() => openModal()}>
             Thêm căn hộ
           </Button>
         )}
       </div>
 
-      <Table
-        rowKey="ID"
-        dataSource={filteredData}
-        loading={loading}
-        columns={columns}
-        bordered
-      />
+      <Table rowKey="ID" dataSource={filteredData} loading={loading} columns={columns} bordered />
 
       <Modal
-        title="Thêm căn hộ"
+        title={editing ? 'Chỉnh sửa căn hộ' : 'Thêm căn hộ'}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
         onOk={handleSubmit}
         okText="Lưu"
       >
         <Form layout="vertical" form={form}>
-          <Form.Item label="Mã căn" name="MaCan" rules={[{ required: true, message: 'Nhập mã căn' }]}>
+          <Form.Item
+            label="Mã căn"
+            name="MaCan"
+            rules={[{ required: true, message: 'Nhập mã căn' }]}
+          >
             <Input placeholder="A1-05" />
           </Form.Item>
-          <Form.Item label="Thuộc chung cư" name="ID_ChungCu" rules={[{ required: true, message: 'Chọn chung cư' }]}>
+          <Form.Item
+            label="Thuộc chung cư"
+            name="ID_ChungCu"
+            rules={[{ required: true, message: 'Chọn chung cư' }]}
+          >
             <Select options={buildings.map((b) => ({ label: b.Ten, value: b.ID }))} placeholder="Chọn chung cư" />
           </Form.Item>
           <Form.Item label="Diện tích (m²)" name="DienTich">
@@ -249,9 +399,15 @@ const ApartmentsPage = () => {
           <Form.Item label="Mô tả" name="MoTa">
             <Input.TextArea rows={3} />
           </Form.Item>
+          <Form.Item label="Mô hình 3D (Momento360 URL)" name="Model3DUrl">
+            <Input placeholder="https://momento360.com/..." />
+          </Form.Item>
           <Form.Item label="Ảnh (URL, cách nhau dấu phẩy)" name="URLs">
             <Input.TextArea rows={2} placeholder="https://..." />
           </Form.Item>
+          <Upload {...uploadProps}>
+            <Button type="dashed">Tải ảnh lên Supabase</Button>
+          </Upload>
         </Form>
       </Modal>
     </>

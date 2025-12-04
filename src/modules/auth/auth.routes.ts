@@ -2,14 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { validateRequest } from '../../middleware/validateRequest';
-import {
-  authenticateUser,
-  changePassword,
-  createUser,
-  getProfileWithResidency,
-  listUsers,
-  updateProfile
-} from './auth.service';
+import { authenticateUser, changePassword, createUser, getProfileWithResidency, listUsers, updateProfile } from './auth.service';
 import { signToken } from '../../utils/jwt';
 import { requireAuth, requireRoles } from '../../middleware/auth';
 import { AppError } from '../../utils/appError';
@@ -43,7 +36,8 @@ router.post(
         hoTen: user.HoTen,
         email: user.Email,
         role: user.LoaiNguoiDung,
-        soDienThoai: user.SoDienThoai
+        soDienThoai: user.SoDienThoai,
+        hinhAnh: user.HinhAnh
       }
     });
   })
@@ -74,7 +68,8 @@ router.post(
         hoTen: user.HoTen,
         email: user.Email,
         role: user.LoaiNguoiDung,
-        soDienThoai: user.SoDienThoai
+        soDienThoai: user.SoDienThoai,
+        hinhAnh: user.HinhAnh
       }
     });
   })
@@ -96,7 +91,8 @@ router.get(
 const updateSchema = z.object({
   body: z.object({
     hoTen: z.string().min(3).optional(),
-    soDienThoai: z.string().optional()
+    soDienThoai: z.string().optional(),
+    hinhAnh: z.string().url().optional()
   })
 });
 
@@ -105,9 +101,9 @@ router.put(
   requireAuth,
   validateRequest(updateSchema),
   asyncHandler(async (req, res) => {
-    const updated = await updateProfile(req.user!.id, req.body);
-    res.json(updated);
-  })
+      const updated = await updateProfile(req.user!.id, req.body);
+      res.json(updated);
+    })
 );
 
 const changePasswordSchema = z.object({
@@ -153,6 +149,17 @@ router.get(
   asyncHandler(async (_req, res) => {
     const users = await listUsers();
     res.json(users);
+  })
+);
+
+router.delete(
+  '/users/:id',
+  requireAuth,
+  requireRoles('Ban quan ly'),
+  asyncHandler(async (req, res) => {
+    const { deleteUser } = await import('./auth.service');
+    await deleteUser(Number(req.params.id));
+    res.status(204).send();
   })
 );
 

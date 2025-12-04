@@ -52,10 +52,10 @@ const RegisterPage = () => {
         }}
       >
         {[
-          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/generated_video%20(1).mp4',
-          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/generated_video%20(2).mp4',
-          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/generated_video%20(3).mp4',
-          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/generated_video.mp4',
+          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/view.mp4',
+          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/view1.mp4',
+          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/view2.mp4',
+          'https://dwmksmgzljllumyaajti.supabase.co/storage/v1/object/public/apt-assets/NEN/view3.mp4',
         ].map((src, i) => (
           <video
             key={i}

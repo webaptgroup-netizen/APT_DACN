@@ -29,7 +29,38 @@ router.get(
 
     const residents = await listResidents();
     const filtered = residents.filter((item) => item.ID_NguoiDung === req.user?.id);
-    res.json(filtered);
+
+    if (filtered.length || req.user?.role !== 'Cu dan') {
+      return res.json(filtered);
+    }
+
+    // Fallback: với tài khoản "Cư dân" chưa được gán vào bảng CuDans,
+    // vẫn trả về một record ảo để phía frontend hiển thị thẻ thông tin cơ bản.
+    const { findUserById } = await import('../auth/auth.service');
+    const user = await findUserById(req.user!.id);
+
+    if (!user) {
+      return res.json(filtered);
+    }
+
+    return res.json([
+      {
+        ID: 0,
+        ID_NguoiDung: user.ID,
+        ID_CanHo: 0,
+        ID_ChungCu: 0,
+        LaChuHo: false,
+        NguoiDungs: {
+          HoTen: user.HoTen,
+          Email: user.Email,
+          SoDienThoai: user.SoDienThoai,
+          LoaiNguoiDung: user.LoaiNguoiDung
+        },
+        CanHos: {
+          MaCan: '---'
+        }
+      }
+    ]);
   })
 );
 

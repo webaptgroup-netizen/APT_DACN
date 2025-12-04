@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase';
+import { env } from '../../config/env';
 import { AppError } from '../../utils/appError';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import type { UserRole } from '../../types/auth';
@@ -16,6 +17,7 @@ export interface CreateUserInput {
 export interface UpdateProfileInput {
   hoTen?: string;
   soDienThoai?: string;
+  hinhAnh?: string;
 }
 
 export interface ChangePasswordInput {
@@ -92,11 +94,14 @@ export const authenticateUser = async (email: string, password: string) => {
 };
 
 export const updateProfile = async (id: number, input: UpdateProfileInput) => {
+  const existing = await findUserById(id);
+
   const { data, error } = await supabase
     .from(USER_TABLE)
     .update({
       HoTen: input.hoTen,
-      SoDienThoai: input.soDienThoai
+      SoDienThoai: input.soDienThoai,
+      HinhAnh: input.hinhAnh
     })
     .eq('ID', id)
     .select()
@@ -104,6 +109,23 @@ export const updateProfile = async (id: number, input: UpdateProfileInput) => {
 
   if (error) {
     throw new AppError('Failed to update profile', 500, error);
+  }
+
+  // If avatar changed, try to delete old file in Supabase Storage (best-effort)
+  try {
+    if (input.hinhAnh && existing?.HinhAnh && input.hinhAnh !== existing.HinhAnh) {
+      const bucket = env.SUPABASE_STORAGE_BUCKET;
+      const prefix = `${env.SUPABASE_URL}/storage/v1/object/public/${bucket}/`;
+
+      if (existing.HinhAnh.startsWith(prefix)) {
+        const path = existing.HinhAnh.substring(prefix.length);
+        if (path) {
+          await supabase.storage.from(bucket).remove([path]);
+        }
+      }
+    }
+  } catch (cleanupError) {
+    console.warn('Failed to cleanup old avatar in storage', cleanupError);
   }
 
   return data;
@@ -140,6 +162,7 @@ export const getProfileWithResidency = async (userId: number) => {
         HoTen,
         Email,
         SoDienThoai,
+        HinhAnh,
         LoaiNguoiDung,
         CuDans (
           ID,
@@ -187,7 +210,7 @@ export const getResidentInfo = async (userId: number) => {
 export const listUsers = async () => {
   const { data, error } = await supabase
     .from(USER_TABLE)
-    .select('ID, HoTen, Email, SoDienThoai, LoaiNguoiDung')
+    .select('ID, HoTen, Email, SoDienThoai, LoaiNguoiDung, HinhAnh')
     .order('HoTen', { ascending: true });
 
   if (error) {
@@ -195,4 +218,12 @@ export const listUsers = async () => {
   }
 
   return data;
+};
+
+export const deleteUser = async (id: number) => {
+  const { error } = await supabase.from(USER_TABLE).delete().eq('ID', id);
+
+  if (error) {
+    throw new AppError('Failed to delete user', 500, error);
+  }
 };

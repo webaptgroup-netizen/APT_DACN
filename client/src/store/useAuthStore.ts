@@ -61,7 +61,8 @@ export const useAuthStore = create<AuthState>()(
               hoTen: data.HoTen,
               email: data.Email,
               role: data.LoaiNguoiDung,
-              soDienThoai: data.SoDienThoai
+              soDienThoai: data.SoDienThoai,
+              hinhAnh: data.HinhAnh
             },
             loading: false
           });
@@ -81,3 +82,6 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+
+

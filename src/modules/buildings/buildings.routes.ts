@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { listBuildings, createBuilding, updateBuilding, deleteBuilding } from './buildings.service';
+import { listBuildings, createBuilding, updateBuilding, deleteBuilding, getBuilding } from './buildings.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { validateRequest } from '../../middleware/validateRequest';
 import { requireAuth, requireRoles } from '../../middleware/auth';
@@ -15,6 +15,25 @@ router.get(
   })
 );
 
+const getByIdSchema = z.object({
+  params: z.object({
+    id: z.string()
+  })
+});
+
+router.get(
+  '/:id',
+  validateRequest(getByIdSchema),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const building = await getBuilding(id);
+    if (!building) {
+      return res.status(404).json({ message: 'Building not found' });
+    }
+    res.json(building);
+  })
+);
+
 const payloadSchema = z.object({
   body: z.object({
     Ten: z.string(),
@@ -22,7 +41,8 @@ const payloadSchema = z.object({
     ChuDauTu: z.string().optional(),
     NamXayDung: z.number().optional(),
     SoTang: z.number().optional(),
-    MoTa: z.string().optional()
+    MoTa: z.string().optional(),
+    ImageURLs: z.array(z.string().url()).optional()
   })
 });
 

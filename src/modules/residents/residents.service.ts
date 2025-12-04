@@ -79,6 +79,13 @@ export const createResident = async (payload: ResidentPayload) => {
 
   await elevateRole(payload.ID_NguoiDung, 'Cu dan');
 
+  try {
+    const { addResidentToBuildingChat } = await import('../chat/chat.service');
+    await addResidentToBuildingChat(payload.ID_NguoiDung, payload.ID_ChungCu);
+  } catch (err) {
+    console.warn('Failed to add resident to building chat', err);
+  }
+
   // Best-effort: notify external n8n workflow about resident upgrade
   try {
     const [{ data: building }, { data: apartment }] = await Promise.all([
@@ -101,7 +108,11 @@ export const createResident = async (payload: ResidentPayload) => {
 };
 
 export const removeResident = async (residentId: number) => {
-  const { data, error } = await supabase.from(TABLE).select('ID_NguoiDung').eq('ID', residentId).maybeSingle();
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('ID_NguoiDung, ID_ChungCu')
+    .eq('ID', residentId)
+    .maybeSingle();
   if (error) {
     throw new AppError('Failed to load resident', 500, error);
   }
@@ -112,6 +123,13 @@ export const removeResident = async (residentId: number) => {
   const { error: deleteError } = await supabase.from(TABLE).delete().eq('ID', residentId);
   if (deleteError) {
     throw new AppError('Failed to delete resident', 500, deleteError);
+  }
+
+  try {
+    const { removeResidentFromBuildingChat } = await import('../chat/chat.service');
+    await removeResidentFromBuildingChat(data.ID_NguoiDung, data.ID_ChungCu);
+  } catch (err) {
+    console.warn('Failed to remove resident from building chat', err);
   }
 
   const { data: stillResident, error: checkError } = await supabase

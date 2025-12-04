@@ -1,0 +1,84 @@
+                          }}
+                          onClick={() => {
+                            setActiveChatId(chat.ID);
+                            void loadMessages(chat.ID);
+                          }}
+                        >
+                          <List.Item.Meta
+                            title={
+                              <Text strong>
+                                {chat.Loai === 'building'
+                                  ? chat.ChungCus?.Ten ?? `Nhóm chung cư #${chat.ID_ChungCu}`
+                                  : 'Chat riêng'}
+                              </Text>
+                            }
+                            description={
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {chat.Loai === 'building' ? 'Tất cả cư dân & BQL' : 'Giữa 2 cư dân'}
+                              </Text>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <Empty description="Chưa có phòng chat" />
+                  )
+                },
+                {
+                  key: 'residents',
+                  label: 'Cư dân',
+                  children: loadingResidents ? (
+                    <div style={{ padding: 16, textAlign: 'center' }}>
+                      <Spin />
+                    </div>
+                  ) : (
+                    <>
+                      <Input.Search
+                        placeholder="Tìm theo tên, email, số căn..."
+                        allowClear
+                        value={residentSearch}
+                        onChange={(e) => setResidentSearch(e.target.value)}
+                        style={{ marginBottom: 8 }}
+                      />
+                      {(() => {
+                        const q = residentSearch.trim().toLowerCase();
+                        const filtered = q
+                          ? residents.filter((r) => {
+                              const name = r.NguoiDungs?.HoTen?.toLowerCase() ?? '';
+                              const email = r.NguoiDungs?.Email?.toLowerCase() ?? '';
+                              const phone = r.NguoiDungs?.SoDienThoai?.toLowerCase() ?? '';
+                              const maCan = r.CanHos?.MaCan?.toLowerCase() ?? '';
+                              return (
+                                name.includes(q) ||
+                                email.includes(q) ||
+                                phone.includes(q) ||
+                                maCan.includes(q)
+                              );
+                            })
+                          : residents;
+
+                        return filtered.length ? (
+                          <List
+                            size="small"
+                            dataSource={filtered}
+                            renderItem={(r) => (
+                              <List.Item
+                                style={{ cursor: 'pointer', borderRadius: 6, marginBottom: 4, paddingInline: 8 }}
+                                onClick={() => r.NguoiDungs && startPrivateChat(r.NguoiDungs.ID)}
+                              >
+                                <List.Item.Meta
+                                  avatar={
+                                    <Avatar>
+                                      {r.NguoiDungs?.HoTen?.[0]?.toUpperCase() ?? '?'}
+                                    </Avatar>
+                                  }
+                                  title={
+                                    <>
+                                      {r.NguoiDungs?.HoTen}{' '}
+                                      {r.CanHos?.MaCan && (
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                          ({r.CanHos.MaCan})
+                                        </Text>
+                                      )}
+                                    </>

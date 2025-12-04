@@ -116,7 +116,6 @@ const DashboardPage = () => {
   if (!isManager) {
     return (
       <>
-        <VideoBackground />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <MarketingShowcase
             headline="Chào mừng bạn đến APT‑CONNECT!"
@@ -138,7 +137,6 @@ const DashboardPage = () => {
   if (loading) {
     return (
       <>
-        <VideoBackground />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Card 
             loading 
@@ -159,7 +157,6 @@ const DashboardPage = () => {
   if (error || !stats) {
     return (
       <>
-        <VideoBackground />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Card 
             style={{ 
@@ -245,7 +242,6 @@ const DashboardPage = () => {
 
   return (
     <>
-      <VideoBackground />
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Space direction="vertical" size={24} style={{ width: '100%' }}>
           <Card
@@ -425,4 +421,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

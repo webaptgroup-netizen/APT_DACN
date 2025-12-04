@@ -58,6 +58,27 @@ textarea {
   font-family: inherit;
 }
 
+@media print {
+  body {
+    margin: 0;
+    background: #ffffff !important;
+  }
+
+  body::before,
+  body::after {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-print-area,
+  .receipt-print-area * {
+    visibility: visible;
+  }
+}
+
 @keyframes float {
   0% {
     transform: translateY(0) scale(1);
@@ -68,4 +89,10 @@ textarea {
   100% {
     transform: translateY(0) scale(1);
   }
+}
+
+/* Làm nổi bật hàng tiêu đề bảng */
+.ant-table-thead > tr > th {
+  background: #eef4ff !important;
+  font-weight: 700 !important;
 }

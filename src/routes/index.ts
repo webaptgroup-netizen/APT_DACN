@@ -9,6 +9,7 @@ import newsRoutes from '../modules/news/news.routes';
 import complaintRoutes from '../modules/complaints/complaints.routes';
 import chatbotRoutes from '../modules/chatbot/chatbot.routes';
 import storageRoutes from '../modules/storage/storage.routes';
+import chatRoutes from '../modules/chat/chat.routes';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/news', newsRoutes);
 router.use('/complaints', complaintRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/storage', storageRoutes);
+router.use('/chat', chatRoutes);
 
 export default router;

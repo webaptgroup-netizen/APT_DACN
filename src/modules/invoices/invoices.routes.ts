@@ -37,7 +37,8 @@ const statusSchema = z.object({
   params: z.object({ id: z.string() }),
   body: z.object({
     status: z.enum(['Chua thanh toan', 'Da thanh toan']),
-    ngayThucHien: z.string().datetime().optional()
+    ngayThucHien: z.string().datetime().optional(),
+    hinhThucThanhToan: z.string().max(100).optional()
   })
 });
 
@@ -51,7 +52,8 @@ router.patch(
       req.user!.id,
       Number(req.params.id),
       req.body.status,
-      req.body.ngayThucHien
+      req.body.ngayThucHien,
+      req.body.hinhThucThanhToan
     );
     res.json(invoice);
   })

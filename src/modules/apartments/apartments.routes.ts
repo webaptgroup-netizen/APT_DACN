@@ -1,12 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import {
-  createApartment,
-  deleteApartment,
-  listApartments,
-  updateApartment,
-  ApartmentStatus
-} from './apartments.service';
+import { createApartment, deleteApartment, listApartments, updateApartment, ApartmentStatus, getApartment } from './apartments.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { validateRequest } from '../../middleware/validateRequest';
 import { requireAuth, requireRoles } from '../../middleware/auth';
@@ -40,6 +34,24 @@ router.get(
   })
 );
 
+const getByIdSchema = z.object({
+  params: z.object({
+    id: z.string()
+  })
+});
+
+router.get(
+  '/:id',
+  validateRequest(getByIdSchema),
+  asyncHandler(async (req, res) => {
+    const apartment = await getApartment(Number(req.params.id));
+    if (!apartment) {
+      return res.status(404).json({ message: 'Apartment not found' });
+    }
+    res.json(apartment);
+  })
+);
+
 const payloadSchema = z.object({
   body: z.object({
     MaCan: z.string(),
@@ -49,6 +61,7 @@ const payloadSchema = z.object({
     Gia: z.number().optional(),
     TrangThai: z.enum(['Dang ban', 'Da ban', 'Cho thue', 'Da thue']),
     MoTa: z.string().optional(),
+    Model3DUrl: z.string().url().optional(),
     URLs: z.array(z.string().url()).optional()
   })
 });

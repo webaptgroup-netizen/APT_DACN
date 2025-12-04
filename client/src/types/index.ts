@@ -48,6 +48,7 @@ export interface Invoice {
   SoTien: number;
   NgayLap: string;
   NgayThucHien?: string;
+  HinhThucThanhToan?: string;
   TrangThai: 'Chua thanh toan' | 'Da thanh toan';
   CanHos?: { MaCan: string };
   ChungCus?: { Ten: string };
