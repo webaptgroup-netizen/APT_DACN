@@ -31,14 +31,20 @@ create table if not exists "CanHos" (
   "Gia" numeric(18,2),
   "TrangThai" text not null check ("TrangThai" in ('Dang ban','Da ban','Cho thue','Da thue')),
   "MoTa" text,
+  "Model3DUrl" text,
   "URLs" text default '[]',
-  "CreatedAt" timestamptz not null default now(),
-  constraint "IX_CanHos_MaCan_ID_ChungCu" unique ("MaCan","ID_ChungCu")
+  "CreatedAt" timestamptz not null default now()
 );
 
 create table if not exists "HinhAnhCanHos" (
   "ID" bigserial primary key,
   "ID_CanHo" bigint not null references "CanHos"("ID") on delete cascade,
+  "DuongDan" text not null
+);
+
+create table if not exists "HinhAnhDichVus" (
+  "ID" bigserial primary key,
+  "ID_DichVu" bigint not null references "DichVus"("ID") on delete cascade,
   "DuongDan" text not null
 );
 
@@ -58,7 +64,7 @@ create table if not exists "CuDans" (
   "ID_CanHo" bigint not null references "CanHos"("ID") on delete cascade,
   "ID_ChungCu" bigint not null references "ChungCus"("ID") on delete cascade,
   "LaChuHo" boolean not null default false,
-  constraint "UQ_CuDans_User" unique ("ID_NguoiDung")
+  constraint "IX_CanHos_MaCan_ID_ChungCu" unique ("MaCan","ID_ChungCu")
 );
 
 create table if not exists "DichVus" (
@@ -76,7 +82,8 @@ create table if not exists "HoaDonDichVus" (
   "ID_ChungCu" bigint not null references "ChungCus"("ID") on delete cascade,
   "SoTien" numeric(18,2) not null,
   "NgayLap" timestamptz not null default now(),
-  "TrangThai" text not null default 'Chua thanh toan' check ("TrangThai" in ('Chua thanh toan','Da thanh toan'))
+  "TrangThai" text not null default 'Chua thanh toan' check ("TrangThai" in ('Chua thanh toan','Da thanh toan')),
+  "NgayThucHien" timestamptz
 );
 
 create table if not exists "HoaDonDichVu_DichVus" (
@@ -84,6 +91,14 @@ create table if not exists "HoaDonDichVu_DichVus" (
   "ID_HoaDon" bigint not null references "HoaDonDichVus"("ID") on delete cascade,
   "ID_DichVu" bigint not null references "DichVus"("ID") on delete cascade,
   constraint "UQ_HoaDon_DichVu" unique ("ID_HoaDon","ID_DichVu")
+);
+
+create table if not exists "PhieuThus" (
+  "ID" bigserial primary key,
+  "ID_HoaDon" bigint not null references "HoaDonDichVus"("ID") on delete cascade,
+  "ID_Admin" bigint not null references "NguoiDungs"("ID") on delete cascade,
+  "NgayXuat" timestamptz not null default now(),
+  constraint "UQ_PhieuThu_HoaDon" unique ("ID_HoaDon")
 );
 
 create table if not exists "TinTucs" (
@@ -102,6 +117,39 @@ create table if not exists "PhanAnhs" (
   "NgayGui" timestamptz not null default now(),
   "PhanHoi" text,
   "HinhAnh" text
+);
+
+-- Chat & messaging ----------------------------------------------------------
+
+create table if not exists "Chats" (
+  "ID" bigserial primary key,
+  "Loai" text not null check ("Loai" in ('building','private')),
+  "ID_ChungCu" bigint references "ChungCus"("ID") on delete cascade,
+  -- PrivateKey dA1m bA�o 1 cA-Bp cA-v dA-n chA� cA3 1 phA2ng chat riA-ng
+  "PrivateKey" text unique,
+  "CreatedAt" timestamptz not null default now(),
+  constraint "CHK_Chat_BuildingOrPrivate"
+    check (
+      ("Loai" = 'building' and "ID_ChungCu" is not null and "PrivateKey" is null) or
+      ("Loai" = 'private' and "ID_ChungCu" is null)
+    )
+);
+
+create table if not exists "ChatMembers" (
+  "ID" bigserial primary key,
+  "ID_Chat" bigint not null references "Chats"("ID") on delete cascade,
+  "ID_NguoiDung" bigint not null references "NguoiDungs"("ID") on delete cascade,
+  "VaiTro" text not null default 'member' check ("VaiTro" in ('member','admin')),
+  "JoinedAt" timestamptz not null default now(),
+  constraint "UQ_Chat_User" unique ("ID_Chat","ID_NguoiDung")
+);
+
+create table if not exists "ChatMessages" (
+  "ID" bigserial primary key,
+  "ID_Chat" bigint not null references "Chats"("ID") on delete cascade,
+  "ID_NguoiGui" bigint not null references "NguoiDungs"("ID") on delete cascade,
+  "NoiDung" text not null,
+  "CreatedAt" timestamptz not null default now()
 );
 
 -- Seed data ---------------------------------------------------------------
@@ -174,4 +222,3 @@ values (
 );
 
 commit;
-

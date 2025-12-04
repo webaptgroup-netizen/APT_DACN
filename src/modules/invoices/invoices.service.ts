@@ -3,6 +3,7 @@ import { AppError } from '../../utils/appError';
 
 const INVOICE_TABLE = 'HoaDonDichVus';
 const RESIDENT_TABLE = 'CuDans';
+const RECEIPT_TABLE = 'PhieuThus';
 
 const baseSelect = `
   *,
@@ -58,10 +59,95 @@ export const listInvoicesForResident = async (userId: number) => {
   return data;
 };
 
-export const updateInvoiceStatus = async (id: number, status: 'Chua thanh toan' | 'Da thanh toan') => {
-  const { data, error } = await supabase.from(INVOICE_TABLE).update({ TrangThai: status }).eq('ID', id).select().single();
+export const updateInvoiceStatus = async (adminId: number, id: number, status: 'Chua thanh toan' | 'Da thanh toan', ngayThucHien?: string) => {
+  const { data: existing, error: fetchError } = await supabase
+    .from(INVOICE_TABLE)
+    .select('*')
+    .eq('ID', id)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new AppError('Failed to load invoice', 500, fetchError);
+  }
+
+  if (!existing) {
+    throw new AppError('Invoice not found', 404);
+  }
+
+  const payload: Record<string, unknown> = { TrangThai: status };
+  if (ngayThucHien) {
+    payload.NgayThucHien = ngayThucHien;
+  }
+
+  const { data, error } = await supabase
+    .from(INVOICE_TABLE)
+    .update(payload)
+    .eq('ID', id)
+    .select()
+    .single();
   if (error) {
     throw new AppError('Failed to update invoice', 500, error);
+  }
+
+  if (status === 'Da thanh toan' && existing.TrangThai !== 'Da thanh toan') {
+    const { data: existingReceipt, error: receiptError } = await supabase
+      .from(RECEIPT_TABLE)
+      .select('ID')
+      .eq('ID_HoaDon', id)
+      .maybeSingle();
+
+    if (receiptError) {
+      throw new AppError('Failed to verify receipt', 500, receiptError);
+    }
+
+    if (!existingReceipt) {
+      const { error: createError } = await supabase
+        .from(RECEIPT_TABLE)
+        .insert({
+          ID_HoaDon: id,
+          ID_Admin: adminId
+        });
+
+      if (createError) {
+        throw new AppError('Failed to create receipt', 500, createError);
+      }
+    }
+  }
+
+  return data;
+};
+
+export const getInvoiceReceipt = async (invoiceId: number) => {
+  const { data, error } = await supabase
+    .from(RECEIPT_TABLE)
+    .select(
+      `
+      ID,
+      NgayXuat,
+      NguoiDungs:ID_Admin (
+        ID,
+        HoTen,
+        Email
+      ),
+      HoaDonDichVus:ID_HoaDon (
+        ID,
+        SoTien,
+        NgayLap,
+        NgayThucHien,
+        TrangThai,
+        CanHos ( MaCan ),
+        ChungCus ( Ten ),
+        HoaDonDichVu_DichVus (
+          DichVus ( TenDichVu )
+        )
+      )
+    `
+    )
+    .eq('ID_HoaDon', invoiceId)
+    .maybeSingle();
+
+  if (error) {
+    throw new AppError('Failed to load receipt', 500, error);
   }
 
   return data;

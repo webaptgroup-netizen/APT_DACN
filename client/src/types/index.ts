@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   soDienThoai?: string;
+  hinhAnh?: string;
 }
 
 export interface Building {
@@ -16,6 +17,7 @@ export interface Building {
   NamXayDung?: number;
   SoTang?: number;
   MoTa?: string;
+  URLs?: string[];
 }
 
 export interface Apartment {
@@ -27,6 +29,7 @@ export interface Apartment {
   Gia?: number;
   TrangThai: string;
   MoTa?: string;
+  Model3DUrl?: string;
   URLs?: string[];
 }
 
@@ -44,6 +47,7 @@ export interface Invoice {
   ID_ChungCu: number;
   SoTien: number;
   NgayLap: string;
+  NgayThucHien?: string;
   TrangThai: 'Chua thanh toan' | 'Da thanh toan';
   CanHos?: { MaCan: string };
   ChungCus?: { Ten: string };
@@ -94,5 +98,6 @@ export interface UserSummary {
   HoTen: string;
   Email: string;
   SoDienThoai?: string;
+  HinhAnh?: string;
   LoaiNguoiDung: UserRole;
 }
