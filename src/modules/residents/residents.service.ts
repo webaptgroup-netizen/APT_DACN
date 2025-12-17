@@ -1,10 +1,9 @@
-import axios from 'axios';
 import { supabase } from '../../config/supabase';
 import { AppError } from '../../utils/appError';
 import { elevateRole, findUserById } from '../auth/auth.service';
+import { buildResidentUpgradePayload, notifyResidentUpgradeWebhook } from '../../integrations/n8n/residentUpgrade';
 
 const TABLE = 'CuDans';
-const RESIDENT_WEBHOOK_URL = 'https://n8n.vtcmobile.vn/webhook/QUYENCUDAN';
 
 export interface ResidentPayload {
   ID_NguoiDung: number;
@@ -88,18 +87,14 @@ export const createResident = async (payload: ResidentPayload) => {
 
   // Best-effort: notify external n8n workflow about resident upgrade
   try {
-    const [{ data: building }, { data: apartment }] = await Promise.all([
-      supabase.from('ChungCus').select('Ten').eq('ID', payload.ID_ChungCu).maybeSingle(),
-      supabase.from('CanHos').select('MaCan').eq('ID', payload.ID_CanHo).maybeSingle()
-    ]);
-
-    await axios.post(RESIDENT_WEBHOOK_URL, {
+    const webhookPayload = await buildResidentUpgradePayload({
       email: user.Email,
       residentName: user.HoTen,
-      buildingName: building?.Ten,
-      apartment: apartment?.MaCan,
-      timestamp: new Date().toISOString()
+      buildingId: payload.ID_ChungCu,
+      apartmentId: payload.ID_CanHo
     });
+
+    await notifyResidentUpgradeWebhook(webhookPayload);
   } catch (err) {
     // Không làm hỏng nghiệp vụ chính nếu gửi webhook thất bại
     console.warn('Failed to notify resident upgrade webhook', err);

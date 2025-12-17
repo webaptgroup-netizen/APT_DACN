@@ -14,8 +14,9 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../api/client';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {
   AimOutlined,
   ArrowDownOutlined,
@@ -91,11 +92,17 @@ const InteriorDesignerPage = () => {
         if (data.length) {
           setSelectedAssetPath(data[0].path);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load 3D assets', err);
+        const maybeError = err as {
+          message?: unknown;
+          response?: { data?: { message?: unknown } };
+        };
         const messageText =
-          err?.response?.data?.message ??
-          err?.message ??
+          (typeof maybeError.response?.data?.message === 'string'
+            ? maybeError.response?.data?.message
+            : undefined) ??
+          (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
           'Không thể tải danh sách nội thất 3D.';
         setAssetsError(messageText);
         message.error(messageText);
@@ -389,15 +396,18 @@ const InteriorDesignerPage = () => {
         return;
       }
 
-      loaderRef.current.load(
+      const loader = loaderRef.current;
+      if (!loader) return;
+
+      loader.load(
         asset.url,
-        (gltf) => {
+        (gltf: GLTF) => {
           const root = gltf.scene;
           furnitureTemplateCacheRef.current.set(asset.path, root);
           addInstanceToScene(root);
         },
         undefined,
-        (err) => {
+        (err: unknown) => {
           console.error('Failed to load GLB model', err);
           message.error('Không tải được mô hình nội thất. Vui lòng thử lại.');
         }
@@ -680,4 +690,3 @@ const InteriorDesignerPage = () => {
 };
 
 export default InteriorDesignerPage;
-

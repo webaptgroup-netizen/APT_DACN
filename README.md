@@ -15,6 +15,8 @@
   npm run dev # http://localhost:5173
   ```
 - Webhook/AI: module tin tuc goi POST toi `N8N_WEBHOOK_URL`, chatbot dung OpenAI (`OPENAI_API_KEY`) hoac fallback neu chua cau hinh.
+- Email cap quyen cu dan: khi BQL tao CuDan hoac cap role `Cu dan`, backend se POST toi webhook n8n qua `N8N_RESIDENT_WEBHOOK_URL` (payload: `email`, `residentName`, `buildingName`, `apartment`, `timestamp`, `appUrl`). Set `APP_URL` de email co nut "Dang nhap".
+- Phan hoi phan anh: khi BQL cap nhat `PhanHoi` cho phan anh, backend se POST toi `N8N_COMPLAINT_REPLY_WEBHOOK_URL` de gui thong bao cho cu dan.
 - Cau hinh: tao file `.env` tu `.env.example`, dien Supabase/SMTP/OpenAI -> `npm install` -> `npm run dev`.
 - API prefix `/api`: xem `src/routes/index.ts` de biet danh sach route (auth, buildings, apartments, residents, services, invoices, news, complaints, chatbot/ask).
 

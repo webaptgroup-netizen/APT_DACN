@@ -6,6 +6,7 @@ import { authenticateUser, changePassword, createUser, getProfileWithResidency, 
 import { signToken } from '../../utils/jwt';
 import { requireAuth, requireRoles } from '../../middleware/auth';
 import { AppError } from '../../utils/appError';
+import { buildResidentUpgradePayload, notifyResidentUpgradeWebhook } from '../../integrations/n8n/residentUpgrade';
 
 const router = Router();
 
@@ -137,7 +138,28 @@ router.post(
   validateRequest(updateRoleSchema),
   asyncHandler(async (req, res) => {
     const { elevateRole } = await import('./auth.service');
+    const { findUserById, getResidentInfo } = await import('./auth.service');
+
+    const existingUser = await findUserById(req.body.userId);
+    const previousRole = existingUser?.LoaiNguoiDung;
+
     const updated = await elevateRole(req.body.userId, req.body.role);
+
+    if (previousRole !== 'Cu dan' && req.body.role === 'Cu dan' && existingUser) {
+      try {
+        const resident = await getResidentInfo(existingUser.ID);
+        const webhookPayload = await buildResidentUpgradePayload({
+          email: existingUser.Email,
+          residentName: existingUser.HoTen,
+          buildingId: resident?.ID_ChungCu,
+          apartmentId: resident?.ID_CanHo
+        });
+
+        await notifyResidentUpgradeWebhook(webhookPayload);
+      } catch (err) {
+        console.warn('Failed to notify resident upgrade webhook (admin role change)', err);
+      }
+    }
     res.json(updated);
   })
 );

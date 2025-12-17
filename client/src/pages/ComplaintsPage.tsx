@@ -1,13 +1,20 @@
-import { App as AntdApp, Button, Card, Form, Input, List, Select, Space, Tag, Upload, Avatar, Badge, Tooltip } from 'antd';
+import { App as AntdApp, Avatar, Badge, Button, Card, Form, Input, List, Select, Space, Tabs, Tag, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import { FileImageOutlined, SendOutlined, ClockCircleOutlined, CheckCircleOutlined, SyncOutlined, MessageOutlined, UserOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import api from '../api/client';
 import type { Complaint } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
 
-const statusOptions = [
+type StatusOption = {
+  label: string;
+  value: Complaint['TrangThai'];
+  color: string;
+  icon: ReactNode;
+};
+
+const statusOptions: StatusOption[] = [
   { label: 'Chưa xử lý', value: 'Chua xu ly', color: '#ff4d4f', icon: <ClockCircleOutlined /> },
   { label: 'Đang xử lý', value: 'Dang xu ly', color: '#faad14', icon: <SyncOutlined spin /> },
   { label: 'Đã xử lý', value: 'Da xu ly', color: '#52c41a', icon: <CheckCircleOutlined /> }
@@ -17,6 +24,7 @@ const ComplaintsPage = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [activeStatusTab, setActiveStatusTab] = useState<Complaint['TrangThai']>('Chua xu ly');
   const [form] = Form.useForm();
   const { user } = useAuthStore();
   const { message } = AntdApp.useApp();
@@ -73,6 +81,23 @@ const ComplaintsPage = () => {
       return false;
     }
   };
+
+  const complaintsByStatus = useMemo(() => {
+    const grouped: Record<Complaint['TrangThai'], Complaint[]> = {
+      'Chua xu ly': [],
+      'Dang xu ly': [],
+      'Da xu ly': []
+    };
+
+    for (const complaint of complaints) {
+      grouped[complaint.TrangThai].push(complaint);
+    }
+
+    return grouped;
+  }, [complaints]);
+
+  const totalCount = complaints.length;
+  const activeCount = complaintsByStatus[activeStatusTab].length;
 
   return (
     <div style={{ 
@@ -249,15 +274,38 @@ const ComplaintsPage = () => {
               <div style={{ flex: 1 }}>
                 <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Danh Sách Phản Ánh</h2>
                 <p style={{ margin: 0, color: '#8c8c8c' }}>
-                  <Badge count={complaints.length} style={{ backgroundColor: '#52c41a' }} />
+                  <Badge count={activeCount} style={{ backgroundColor: '#52c41a' }} />
                   <span style={{ marginLeft: 8 }}>Tổng số phản ánh</span>
+                  <Tag style={{ marginLeft: 12, borderRadius: 999 }} color="default">
+                    {totalCount}
+                  </Tag>
                 </p>
               </div>
             </div>
 
+            <Tabs
+              activeKey={activeStatusTab}
+              onChange={(key) => setActiveStatusTab(key as Complaint['TrangThai'])}
+              style={{ marginBottom: 16 }}
+              items={statusOptions.map((tab) => ({
+                key: tab.value,
+                label: (
+                  <Space size={10}>
+                    <span style={{ color: tab.color }}>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                    <Badge
+                      count={complaintsByStatus[tab.value].length}
+                      style={{ backgroundColor: tab.color }}
+                      overflowCount={999}
+                    />
+                  </Space>
+                )
+              }))}
+            />
+
             <List
               loading={loading}
-              dataSource={complaints}
+              dataSource={complaintsByStatus[activeStatusTab]}
               renderItem={(item) => {
                 const status = statusOptions.find((s) => s.value === item.TrangThai);
                 return (

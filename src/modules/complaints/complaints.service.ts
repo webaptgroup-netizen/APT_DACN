@@ -1,10 +1,9 @@
-import axios from 'axios';
 import dayjs from 'dayjs';
 import { supabase } from '../../config/supabase';
 import { AppError } from '../../utils/appError';
+import { buildComplaintReplyPayload, notifyComplaintCreatedWebhook, notifyComplaintReplyWebhook } from '../../integrations/n8n/complaints';
 
 const TABLE = 'PhanAnhs';
-const COMPLAINT_WEBHOOK_URL = 'https://n8n.vtcmobile.vn/webhook/GUIPHANANH';
 
 export type ComplaintStatus = 'Chua xu ly' | 'Dang xu ly' | 'Da xu ly';
 
@@ -65,7 +64,7 @@ export const createComplaint = async (userId: number, payload: ComplaintPayload)
       .eq('ID', userId)
       .maybeSingle();
 
-    await axios.post(COMPLAINT_WEBHOOK_URL, {
+    await notifyComplaintCreatedWebhook({
       email: user?.Email,
       residentName: user?.HoTen,
       complaintId: data.ID,
@@ -90,6 +89,28 @@ export const updateComplaint = async (
   const { data, error } = await supabase.from(TABLE).update(payload).eq('ID', id).select().single();
   if (error) {
     throw new AppError('Failed to update complaint', 500, error);
+  }
+
+  // Best-effort: notify resident when manager replies
+  if (payload.PhanHoi !== undefined) {
+    try {
+      const replyPayload = await buildComplaintReplyPayload({
+        complaint: {
+          ID: data.ID,
+          ID_NguoiDung: data.ID_NguoiDung,
+          NoiDung: data.NoiDung,
+          PhanHoi: data.PhanHoi,
+          TrangThai: data.TrangThai,
+          NgayGui: data.NgayGui
+        }
+      });
+
+      if (replyPayload) {
+        await notifyComplaintReplyWebhook(replyPayload);
+      }
+    } catch (err) {
+      console.warn('Failed to notify complaint reply webhook', err);
+    }
   }
 
   return data;
