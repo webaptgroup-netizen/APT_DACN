@@ -237,6 +237,19 @@ const LoginPage = () => {
               />
             </Form.Item>
 
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -6, marginBottom: 14 }}>
+              <Link
+                to="/forgot-password"
+                style={{
+                  color: '#93c5fd',
+                  fontWeight: 600,
+                  textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                }}
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
+
             <Button
               type="primary"
               htmlType="submit"

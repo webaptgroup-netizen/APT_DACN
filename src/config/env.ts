@@ -17,6 +17,8 @@ const envSchema = z.object({
   EMAIL_USER: z.string().optional(),
   EMAIL_PASSWORD: z.string().optional(),
   N8N_WEBHOOK_URL: z.string().optional(),
+  N8N_PASSWORD_RESET_WEBHOOK_URL: z.string().optional(),
+  N8N_PASSWORD_CHANGED_WEBHOOK_URL: z.string().optional(),
   N8N_RESIDENT_WEBHOOK_URL: z.string().optional(),
   N8N_COMPLAINT_WEBHOOK_URL: z.string().optional(),
   N8N_COMPLAINT_REPLY_WEBHOOK_URL: z.string().optional(),

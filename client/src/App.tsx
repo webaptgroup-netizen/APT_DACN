@@ -14,6 +14,9 @@ import NewsPage from './pages/NewsPage';
 import InteriorDesignerPage from './pages/InteriorDesignerPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/Register';
+import ForgotPasswordRequestPage from './pages/ForgotPasswordRequest';
+import ForgotPasswordVerifyPage from './pages/ForgotPasswordVerify';
+import ForgotPasswordResetPage from './pages/ForgotPasswordReset';
 import ServicesPage from './pages/ServicesPage';
 import ResidentsPage from './pages/ResidentsPage';
 import UsersPage from './pages/UsersPage';
@@ -47,7 +50,10 @@ const router = createBrowserRouter([
     ]
   },
   { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> }
+  { path: '/register', element: <RegisterPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordRequestPage /> },
+  { path: '/forgot-password/verify', element: <ForgotPasswordVerifyPage /> },
+  { path: '/forgot-password/reset', element: <ForgotPasswordResetPage /> }
 ]);
 
 function App() {

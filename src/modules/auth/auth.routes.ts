@@ -2,7 +2,17 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { validateRequest } from '../../middleware/validateRequest';
-import { authenticateUser, changePassword, createUser, getProfileWithResidency, listUsers, updateProfile } from './auth.service';
+import {
+  authenticateUser,
+  changePassword,
+  createUser,
+  getProfileWithResidency,
+  listUsers,
+  requestPasswordReset,
+  resetPasswordWithToken,
+  updateProfile,
+  verifyPasswordResetCode
+} from './auth.service';
 import { signToken } from '../../utils/jwt';
 import { requireAuth, requireRoles } from '../../middleware/auth';
 import { AppError } from '../../utils/appError';
@@ -76,6 +86,59 @@ router.post(
         hinhAnh: user.HinhAnh
       }
     });
+  })
+);
+
+const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email()
+  })
+});
+
+router.post(
+  '/forgot-password',
+  validateRequest(forgotPasswordSchema),
+  asyncHandler(async (req, res) => {
+    await requestPasswordReset(req.body.email);
+    res.json({ message: 'Nếu email tồn tại trong hệ thống, mã xác nhận đã được gửi.' });
+  })
+);
+
+const verifyResetCodeSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email(),
+    code: z.string().regex(/^\d{6}$/)
+  })
+});
+
+router.post(
+  '/forgot-password/verify',
+  validateRequest(verifyResetCodeSchema),
+  asyncHandler(async (req, res) => {
+    const result = await verifyPasswordResetCode(req.body.email, req.body.code);
+    res.json(result);
+  })
+);
+
+const resetPasswordSchema = z.object({
+  body: z
+    .object({
+      resetToken: z.string().min(10),
+      newPassword: z.string().min(8),
+      confirmPassword: z.string().min(8)
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: 'Mật khẩu nhập lại không khớp',
+      path: ['confirmPassword']
+    })
+});
+
+router.post(
+  '/forgot-password/reset',
+  validateRequest(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    await resetPasswordWithToken(req.body.resetToken, req.body.newPassword);
+    res.json({ message: 'Đổi mật khẩu thành công' });
   })
 );
 

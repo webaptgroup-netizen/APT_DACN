@@ -58,6 +58,21 @@ create table if not exists "NguoiDungs" (
   "CreatedAt" timestamptz not null default now()
 );
 
+create table if not exists "PasswordResetRequests" (
+  "ID" bigserial primary key,
+  "ID_NguoiDung" bigint not null references "NguoiDungs"("ID") on delete cascade,
+  "Email" citext not null unique,
+  "CodeHash" text not null,
+  "ExpiresAt" timestamptz not null,
+  "FailedAttempts" int not null default 0,
+  "LockedUntil" timestamptz,
+  "VerifiedAt" timestamptz,
+  "ResetTokenHash" text,
+  "ResetTokenExpiresAt" timestamptz,
+  "ConsumedAt" timestamptz,
+  "CreatedAt" timestamptz not null default now()
+);
+
 create table if not exists "CuDans" (
   "ID" bigserial primary key,
   "ID_NguoiDung" bigint not null references "NguoiDungs"("ID") on delete cascade,
