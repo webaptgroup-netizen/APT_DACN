@@ -23,6 +23,7 @@ import UsersPage from './pages/UsersPage';
 import BuildingDetailPage from './pages/BuildingDetailPage';
 import ApartmentDetailPage from './pages/ApartmentDetailPage';
 import ChatPanel from './components/ChatPanel';
+import MyApartmentsPage from './pages/MyApartmentsPage';
 
 const router = createBrowserRouter([
   {
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
       { path: 'buildings', element: <BuildingsPage /> },
       { path: 'buildings/:id', element: <BuildingDetailPage /> },
       { path: 'apartments', element: <ApartmentsPage /> },
+      { path: 'apartments/my', element: <MyApartmentsPage /> },
       { path: 'apartments/:id', element: <ApartmentDetailPage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'residents', element: <ResidentsPage /> },

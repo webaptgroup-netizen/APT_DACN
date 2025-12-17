@@ -1,6 +1,17 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createApartment, deleteApartment, listApartments, updateApartment, ApartmentStatus, getApartment } from './apartments.service';
+import {
+  createApartment,
+  deleteApartment,
+  listApartments,
+  updateApartment,
+  ApartmentStatus,
+  getApartment,
+  getOwnerApartment,
+  listUserApartments,
+  updateOwnerApartment,
+  updateUserApartmentAsOwner
+} from './apartments.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { validateRequest } from '../../middleware/validateRequest';
 import { requireAuth, requireRoles } from '../../middleware/auth';
@@ -31,6 +42,57 @@ router.get(
 
     const apartments = await listApartments(filters);
     res.json(apartments);
+  })
+);
+
+router.get(
+  '/my',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const result = await getOwnerApartment(req.user!.id);
+    res.json(result);
+  })
+);
+
+const ownerUpdateSchema = z.object({
+  body: z.object({
+    MoTa: z.string().optional(),
+    Model3DUrl: z.string().url().optional(),
+    URLs: z.array(z.string().url()).optional()
+  })
+});
+
+router.put(
+  '/my',
+  requireAuth,
+  validateRequest(ownerUpdateSchema),
+  asyncHandler(async (req, res) => {
+    const updated = await updateOwnerApartment(req.user!.id, req.body);
+    res.json(updated);
+  })
+);
+
+router.get(
+  '/mine',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const apartments = await listUserApartments(req.user!.id);
+    res.json(apartments);
+  })
+);
+
+const mineUpdateSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: ownerUpdateSchema.shape.body
+});
+
+router.put(
+  '/mine/:id',
+  requireAuth,
+  validateRequest(mineUpdateSchema),
+  asyncHandler(async (req, res) => {
+    const updated = await updateUserApartmentAsOwner(req.user!.id, Number(req.params.id), req.body);
+    res.json(updated);
   })
 );
 

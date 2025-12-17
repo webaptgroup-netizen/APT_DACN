@@ -3,6 +3,7 @@ import { AppError } from '../../utils/appError';
 
 const TABLE = 'CanHos';
 const IMAGE_TABLE = 'HinhAnhCanHos';
+const RESIDENT_TABLE = 'CuDans';
 
 export type ApartmentStatus = 'Dang ban' | 'Da ban' | 'Cho thue' | 'Da thue';
 
@@ -16,6 +17,34 @@ export interface ApartmentPayload {
   MoTa?: string;
   Model3DUrl?: string;
   URLs?: string[];
+}
+
+export interface OwnerApartmentPayload {
+  MoTa?: string;
+  Model3DUrl?: string;
+  URLs?: string[];
+}
+
+export interface UserApartmentSummary {
+  apartment: any;
+  residentsCount: number;
+  isOwner: boolean;
+  owner?: {
+    hoTen: string;
+    email: string;
+    soDienThoai?: string;
+  };
+  residents: Array<{
+    ID: number;
+    ID_NguoiDung: number;
+    LaChuHo: boolean;
+    NguoiDungs?: {
+      HoTen: string;
+      Email: string;
+      SoDienThoai?: string;
+      LoaiNguoiDung: string;
+    };
+  }>;
 }
 
 const parseUrls = (record: any) => {
@@ -163,4 +192,167 @@ export const deleteApartment = async (id: number) => {
   if (error) {
     throw new AppError('Failed to delete apartment', 500, error);
   }
+};
+
+const getOwnerApartmentId = async (userId: number) => {
+  const { data, error } = await supabase
+    .from(RESIDENT_TABLE)
+    .select('ID_CanHo')
+    .eq('ID_NguoiDung', userId)
+    .eq('LaChuHo', true)
+    .maybeSingle();
+
+  if (error) {
+    throw new AppError('Failed to resolve owner apartment', 500, error);
+  }
+
+  const apartmentId = (data as any)?.ID_CanHo as number | undefined;
+  if (typeof apartmentId !== 'number') {
+    throw new AppError('Bạn không phải chủ hộ', 403);
+  }
+
+  return apartmentId;
+};
+
+export const getOwnerApartment = async (userId: number) => {
+  const apartmentId = await getOwnerApartmentId(userId);
+  const apartment = await getApartment(apartmentId);
+  if (!apartment) {
+    throw new AppError('Apartment not found', 404);
+  }
+
+  const { count, error } = await supabase
+    .from(RESIDENT_TABLE)
+    .select('ID', { count: 'exact', head: true })
+    .eq('ID_CanHo', apartmentId);
+
+  if (error) {
+    throw new AppError('Failed to count residents', 500, error);
+  }
+
+  return { apartment, residentsCount: count ?? 0 };
+};
+
+export const updateOwnerApartment = async (userId: number, payload: OwnerApartmentPayload) => {
+  const apartmentId = await getOwnerApartmentId(userId);
+  const allowedPayload: OwnerApartmentPayload = {
+    MoTa: payload.MoTa,
+    Model3DUrl: payload.Model3DUrl,
+    URLs: payload.URLs
+  };
+
+  const updated = await updateApartment(apartmentId, allowedPayload);
+  return attachModel3DUrl(updated);
+};
+
+export const listUserApartments = async (userId: number): Promise<UserApartmentSummary[]> => {
+  const { data: links, error } = await supabase
+    .from(RESIDENT_TABLE)
+    .select('ID_CanHo, LaChuHo')
+    .eq('ID_NguoiDung', userId);
+
+  if (error) {
+    throw new AppError('Failed to load user apartments', 500, error);
+  }
+
+  const apartmentIds = Array.from(
+    new Set(
+      (links ?? [])
+        .map((row: any) => row?.ID_CanHo as number | undefined)
+        .filter((id): id is number => typeof id === 'number' && id > 0)
+    )
+  );
+
+  if (!apartmentIds.length) {
+    return [];
+  }
+
+  const summaries = await Promise.all(
+    apartmentIds.map(async (apartmentId) => {
+      const [apartment, residentsRes] = await Promise.all([
+        getApartment(apartmentId),
+        supabase
+          .from(RESIDENT_TABLE)
+          .select(
+            `
+              ID,
+              ID_NguoiDung,
+              LaChuHo,
+              NguoiDungs (
+                HoTen,
+                Email,
+                SoDienThoai,
+                LoaiNguoiDung
+              )
+            `
+          )
+          .eq('ID_CanHo', apartmentId)
+          .order('LaChuHo', { ascending: false })
+      ]);
+
+      if (!apartment) {
+        throw new AppError('Apartment not found', 404);
+      }
+
+      if (residentsRes.error) {
+        throw new AppError('Failed to load apartment residents', 500, residentsRes.error);
+      }
+
+      const residents = (residentsRes.data ?? []) as any[];
+      const residentsCount = residents.length;
+      const isOwner = residents.some((r) => r?.ID_NguoiDung === userId && r?.LaChuHo === true);
+      const ownerResident = residents.find((r) => r?.LaChuHo === true);
+      const ownerUser = ownerResident?.NguoiDungs as
+        | { HoTen?: unknown; Email?: unknown; SoDienThoai?: unknown }
+        | undefined;
+
+      return {
+        apartment,
+        residentsCount,
+        isOwner,
+        owner:
+          ownerUser && typeof ownerUser.HoTen === 'string' && typeof ownerUser.Email === 'string'
+            ? {
+                hoTen: ownerUser.HoTen,
+                email: ownerUser.Email,
+                soDienThoai: typeof ownerUser.SoDienThoai === 'string' ? ownerUser.SoDienThoai : undefined
+              }
+            : undefined,
+        residents
+      };
+    })
+  );
+
+  return summaries.sort((a, b) => Number(b.isOwner) - Number(a.isOwner));
+};
+
+export const updateUserApartmentAsOwner = async (
+  userId: number,
+  apartmentId: number,
+  payload: OwnerApartmentPayload
+) => {
+  const { data, error } = await supabase
+    .from(RESIDENT_TABLE)
+    .select('ID')
+    .eq('ID_NguoiDung', userId)
+    .eq('ID_CanHo', apartmentId)
+    .eq('LaChuHo', true)
+    .maybeSingle();
+
+  if (error) {
+    throw new AppError('Failed to verify owner', 500, error);
+  }
+
+  if (!data) {
+    throw new AppError('Bạn không phải chủ hộ', 403);
+  }
+
+  const allowedPayload: OwnerApartmentPayload = {
+    MoTa: payload.MoTa,
+    Model3DUrl: payload.Model3DUrl,
+    URLs: payload.URLs
+  };
+
+  const updated = await updateApartment(apartmentId, allowedPayload);
+  return attachModel3DUrl(updated);
 };

@@ -3,6 +3,7 @@ import { Alert, Button, Card, Form, Input, Typography, message } from 'antd';
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import AuthBackground from '../components/AuthBackground';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -51,15 +52,7 @@ const ForgotPasswordResetPage = () => {
   const isReady = Boolean(resetToken);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        padding: '2rem',
-        background: 'linear-gradient(135deg,#0b1220,#0f172a)',
-      }}
-    >
+    <AuthBackground>
       <Card
         style={{
           width: 420,
@@ -184,9 +177,8 @@ const ForgotPasswordResetPage = () => {
           </Link>
         </Paragraph>
       </Card>
-    </div>
+    </AuthBackground>
   );
 };
 
 export default ForgotPasswordResetPage;
-

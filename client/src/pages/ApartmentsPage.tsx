@@ -258,6 +258,11 @@ const ApartmentsPage = () => {
         fixed: 'right',
         render: (_, record) => (
           <Space>
+            {false && (
+            <Button type="primary" onClick={() => navigate('/apartments/my')}>
+              Căn hộ của tôi
+            </Button>
+            )}
             <Button type="link" onClick={() => navigate(`/apartments/${record.ID}`)}>
               Xem chi tiết
             </Button>
@@ -346,6 +351,9 @@ const ApartmentsPage = () => {
   if (!isManager) {
     return (
       <Space direction="vertical" size={24} style={{ width: '100%' }}>
+        <Button type="primary" onClick={() => navigate('/apartments/my')} style={{ alignSelf: 'flex-start' }}>
+          Căn hộ của tôi
+        </Button>
         <div className="page-header">
           <div>
             <Typography.Title level={3} style={{ margin: 0 }}>

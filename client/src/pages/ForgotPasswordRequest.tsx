@@ -3,6 +3,7 @@ import { Alert, Button, Card, Form, Input, Typography, message } from 'antd';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import AuthBackground from '../components/AuthBackground';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -32,15 +33,7 @@ const ForgotPasswordRequestPage = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        padding: '2rem',
-        background: 'linear-gradient(135deg,#0b1220,#0f172a)',
-      }}
-    >
+    <AuthBackground>
       <Card
         style={{
           width: 420,
@@ -130,9 +123,8 @@ const ForgotPasswordRequestPage = () => {
           </Link>
         </Paragraph>
       </Card>
-    </div>
+    </AuthBackground>
   );
 };
 
 export default ForgotPasswordRequestPage;
-
