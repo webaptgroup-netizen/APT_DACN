@@ -21,6 +21,24 @@ import api from '../api/client';
 import type { Apartment, Building, Resident, UserSummary } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'string' && error.trim()) return error;
+
+  if (error && typeof error === 'object') {
+    const maybeError = error as {
+      message?: unknown;
+      response?: { data?: { message?: unknown } };
+    };
+
+    const responseMessage = maybeError.response?.data?.message;
+    if (typeof responseMessage === 'string' && responseMessage.trim()) return responseMessage;
+
+    if (typeof maybeError.message === 'string' && maybeError.message.trim()) return maybeError.message;
+  }
+
+  return fallback;
+};
+
 const ResidentsPage = () => {
   const { user } = useAuthStore();
   const { message } = AntdApp.useApp();
@@ -46,8 +64,8 @@ const ResidentsPage = () => {
           params: buildingId ? { buildingId } : undefined
         });
         setResidents(data);
-      } catch (err: any) {
-        message.error(err.response?.data?.message ?? 'Không thể tải danh sách cư dân');
+      } catch (err: unknown) {
+        message.error(getApiErrorMessage(err, 'Không thể tải danh sách cư dân'));
       } finally {
         setLoading(false);
       }
@@ -74,8 +92,8 @@ const ResidentsPage = () => {
         setBuildings(buildingRes.data);
         setApartments(apartmentRes.data);
         setUsers(userRes.data);
-      } catch (err: any) {
-        message.error(err.response?.data?.message ?? 'Không thể tải dữ liệu tham chiếu');
+      } catch (err: unknown) {
+        message.error(getApiErrorMessage(err, 'Không thể tải dữ liệu tham chiếu'));
       } finally {
         setReferencesLoading(false);
       }
@@ -120,8 +138,8 @@ const ResidentsPage = () => {
         await api.post(`/residents/${resident.ID}/owner`, { isOwner });
         message.success(isOwner ? 'Đã đánh dấu chủ hộ' : 'Đã bỏ trạng thái chủ hộ');
         await loadResidents(filters.buildingId);
-      } catch (err: any) {
-        message.error(err.response?.data?.message ?? 'Không thể cập nhật chủ hộ');
+      } catch (err: unknown) {
+        message.error(getApiErrorMessage(err, 'Không thể cập nhật chủ hộ'));
       }
     },
     [filters.buildingId, loadResidents, message]
@@ -133,8 +151,8 @@ const ResidentsPage = () => {
         await api.delete(`/residents/${resident.ID}`);
         message.success('Đã xóa cư dân khỏi căn hộ');
         await loadResidents(filters.buildingId);
-      } catch (err: any) {
-        message.error(err.response?.data?.message ?? 'Không thể xóa cư dân');
+      } catch (err: unknown) {
+        message.error(getApiErrorMessage(err, 'Không thể xóa cư dân'));
       }
     },
     [filters.buildingId, loadResidents, message]
@@ -159,8 +177,8 @@ const ResidentsPage = () => {
       message.success('Đã gán cư dân cho căn hộ');
       setModalOpen(false);
       await loadResidents(filters.buildingId);
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể gán cư dân');
+    } catch (err: unknown) {
+      message.error(getApiErrorMessage(err, 'Không thể gán cư dân'));
     } finally {
       setSaving(false);
     }
@@ -172,7 +190,7 @@ const ResidentsPage = () => {
         title: 'Cư dân',
         dataIndex: ['NguoiDungs', 'HoTen'],
         key: 'resident',
-        render: (_: any, record) => (
+        render: (_: unknown, record) => (
           <Space direction="vertical" size={0}>
             <Typography.Text strong>{record.NguoiDungs?.HoTen ?? '---'}</Typography.Text>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>

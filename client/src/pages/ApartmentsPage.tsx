@@ -19,8 +19,8 @@ import {
 } from 'antd';
 import type { UploadProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import type { Apartment, Building } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -34,6 +34,7 @@ const statusOptions = [
 
 const ApartmentsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +44,7 @@ const ApartmentsPage = () => {
   const { user } = useAuthStore();
   const { message } = AntdApp.useApp();
   const [filters, setFilters] = useState<{ buildingId?: number; status?: string }>({});
+  const initialFiltersAppliedRef = useRef(false);
 
   const isManager = user?.role === 'Ban quan ly';
 
@@ -60,6 +62,41 @@ const ApartmentsPage = () => {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (initialFiltersAppliedRef.current) return;
+
+    const buildingIdParam = searchParams.get('buildingId');
+    const buildingNameParam = searchParams.get('buildingName') ?? searchParams.get('building');
+    const statusParam = searchParams.get('status');
+
+    if (!buildingIdParam && !buildingNameParam && !statusParam) {
+      initialFiltersAppliedRef.current = true;
+      return;
+    }
+
+    const nextFilters: { buildingId?: number; status?: string } = {};
+
+    if (buildingIdParam) {
+      const parsed = Number(buildingIdParam);
+      if (Number.isFinite(parsed)) {
+        nextFilters.buildingId = parsed;
+      } else {
+        initialFiltersAppliedRef.current = true;
+      }
+    } else if (buildingNameParam) {
+      if (!buildings.length) return;
+      const found = buildings.find((b) => b.Ten === buildingNameParam);
+      if (found) nextFilters.buildingId = found.ID;
+    }
+
+    if (statusParam) {
+      nextFilters.status = statusParam;
+    }
+
+    setFilters((prev) => ({ ...prev, ...nextFilters }));
+    initialFiltersAppliedRef.current = true;
+  }, [buildings, searchParams]);
 
   const filteredData = useMemo(() => {
     return apartments.filter((apt) => {
@@ -116,8 +153,20 @@ const ApartmentsPage = () => {
       setEditing(null);
       form.resetFields();
       await loadData();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể lưu căn hộ');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể lưu căn hộ';
+
+      message.error(messageText);
     }
   };
 
@@ -311,6 +360,7 @@ const ApartmentsPage = () => {
               allowClear
               placeholder="Chọn chung cư"
               style={{ minWidth: 200 }}
+              value={filters.buildingId}
               options={buildings.map((b) => ({ label: b.Ten, value: b.ID }))}
               onChange={(value) => setFilters((prev) => ({ ...prev, buildingId: value }))}
             />
@@ -318,6 +368,7 @@ const ApartmentsPage = () => {
               allowClear
               placeholder="Trạng thái"
               style={{ minWidth: 160 }}
+              value={filters.status}
               options={statusOptions}
               onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
             />
@@ -338,6 +389,7 @@ const ApartmentsPage = () => {
               allowClear
               placeholder="Chọn chung cư"
               style={{ minWidth: 200 }}
+              value={filters.buildingId}
               options={buildings.map((b) => ({ label: b.Ten, value: b.ID }))}
               onChange={(value) => setFilters((prev) => ({ ...prev, buildingId: value }))}
             />
@@ -345,6 +397,7 @@ const ApartmentsPage = () => {
               allowClear
               placeholder="Trạng thái"
               style={{ minWidth: 160 }}
+              value={filters.status}
               options={statusOptions}
               onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
             />

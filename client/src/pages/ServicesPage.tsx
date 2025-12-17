@@ -112,8 +112,20 @@ const ServicesPage = () => {
       setEditing(null);
       form.resetFields();
       await loadServices();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Khong the luu dich vu');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Khong the luu dich vu';
+
+      message.error(messageText);
     }
   };
 
@@ -122,8 +134,20 @@ const ServicesPage = () => {
       await api.delete(`/services/${service.ID}`);
       message.success('Da xoa dich vu');
       await loadServices();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Khong the xoa dich vu');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Khong the xoa dich vu';
+
+      message.error(messageText);
     }
   };
 
@@ -138,8 +162,20 @@ const ServicesPage = () => {
     try {
       await api.post(`/services/${selectedService.ID}/register`);
       message.success('Dang ky dich vu thanh cong. Vui long kiem tra hoa don.');
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Khong the dang ky dich vu');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Khong the dang ky dich vu';
+
+      message.error(messageText);
     } finally {
       setConfirmLoading(false);
       setConfirmOpen(false);

@@ -24,8 +24,20 @@ const LoginPage = () => {
       setError(undefined);
       await login(values);
       navigate('/dashboard', { replace: true });
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Đăng nhập thất bại');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Đăng nhập thất bại';
+
+      setError(messageText);
     } finally {
       setSubmitting(false);
     }
@@ -168,7 +180,7 @@ const LoginPage = () => {
             >
               <Input
                 prefix={
-                  <span style={{ fontSize: '18px' }}>✉️</span>
+                  <MailOutlined />
                 }
                 placeholder="you@example.com"
                 size="large"
@@ -205,7 +217,7 @@ const LoginPage = () => {
             >
               <Input.Password
                 prefix={
-                  <span style={{ fontSize: '18px' }}>🔐</span>
+                  <LockOutlined />
                 }
                 placeholder="••••••••"
                 size="large"

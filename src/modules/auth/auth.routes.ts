@@ -7,6 +7,7 @@ import { signToken } from '../../utils/jwt';
 import { requireAuth, requireRoles } from '../../middleware/auth';
 import { AppError } from '../../utils/appError';
 import { buildResidentUpgradePayload, notifyResidentUpgradeWebhook } from '../../integrations/n8n/residentUpgrade';
+import { normalizeUserRole } from '../../utils/roles';
 
 const router = Router();
 
@@ -24,10 +25,11 @@ router.post(
   validateRequest(registerSchema),
   asyncHandler(async (req, res) => {
     const user = await createUser(req.body);
+    const role = normalizeUserRole(user.LoaiNguoiDung);
     const token = signToken({
       id: user.ID,
       email: user.Email,
-      role: user.LoaiNguoiDung
+      role
     });
 
     res.status(201).json({
@@ -36,7 +38,7 @@ router.post(
         id: user.ID,
         hoTen: user.HoTen,
         email: user.Email,
-        role: user.LoaiNguoiDung,
+        role,
         soDienThoai: user.SoDienThoai,
         hinhAnh: user.HinhAnh
       }
@@ -56,10 +58,11 @@ router.post(
   validateRequest(loginSchema),
   asyncHandler(async (req, res) => {
     const user = await authenticateUser(req.body.email, req.body.password);
+    const role = normalizeUserRole(user.LoaiNguoiDung);
     const token = signToken({
       id: user.ID,
       email: user.Email,
-      role: user.LoaiNguoiDung
+      role
     });
 
     res.json({
@@ -68,7 +71,7 @@ router.post(
         id: user.ID,
         hoTen: user.HoTen,
         email: user.Email,
-        role: user.LoaiNguoiDung,
+        role,
         soDienThoai: user.SoDienThoai,
         hinhAnh: user.HinhAnh
       }

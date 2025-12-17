@@ -46,8 +46,20 @@ const UsersPage = () => {
     try {
       const { data } = await api.get<UserSummary[]>('/auth/users');
       setUsers(data);
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể tải danh sách người dùng');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể tải danh sách người dùng';
+
+      message.error(messageText);
     } finally {
       setLoading(false);
     }
@@ -64,8 +76,20 @@ const UsersPage = () => {
       await api.post('/auth/role', { userId: record.ID, role });
       message.success('Đã cập nhật vai trò');
       await loadUsers();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể cập nhật vai trò');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể cập nhật vai trò';
+
+      message.error(messageText);
     }
   };
 
@@ -74,8 +98,20 @@ const UsersPage = () => {
       await api.delete(`/auth/users/${record.ID}`);
       message.success('Đã xóa người dùng');
       await loadUsers();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể xóa người dùng');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể xóa người dùng';
+
+      message.error(messageText);
     }
   };
 
@@ -103,8 +139,20 @@ const UsersPage = () => {
       message.success('Đã tạo người dùng mới');
       setModalOpen(false);
       await loadUsers();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể tạo người dùng');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string'
+          ? maybeError.response?.data?.message
+          : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể tạo người dùng';
+
+      message.error(messageText);
     } finally {
       setSaving(false);
     }
@@ -117,7 +165,7 @@ const UsersPage = () => {
         dataIndex: 'HinhAnh',
         key: 'HinhAnh',
         width: 72,
-        render: (_: any, record) => (
+        render: (_: unknown, record) => (
           <Avatar src={record.HinhAnh}>
             {record.HoTen?.charAt(0)?.toUpperCase() ?? '?'}
           </Avatar>

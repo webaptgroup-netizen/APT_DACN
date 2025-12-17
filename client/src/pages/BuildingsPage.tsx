@@ -96,8 +96,18 @@ const BuildingsPage = () => {
       }
       setModalOpen(false);
       await loadData();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể lưu chung cư');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string' ? maybeError.response?.data?.message : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể lưu chung cư';
+
+      message.error(messageText);
     }
   };
 
@@ -106,8 +116,18 @@ const BuildingsPage = () => {
       await api.delete(`/buildings/${record.ID}`);
       message.success('Đã xóa chung cư');
       await loadData();
-    } catch (err: any) {
-      message.error(err.response?.data?.message ?? 'Không thể xóa');
+    } catch (err: unknown) {
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+
+      const messageText =
+        (typeof maybeError.response?.data?.message === 'string' ? maybeError.response?.data?.message : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể xóa';
+
+      message.error(messageText);
     }
   };
 

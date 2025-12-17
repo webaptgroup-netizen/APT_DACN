@@ -18,8 +18,20 @@ const BuildingDetailPage = () => {
       try {
         const { data } = await api.get<Building>(`/buildings/${id}`);
         setBuilding(data);
-      } catch (err: any) {
-        message.error(err.response?.data?.message ?? 'Không thể tải thông tin chung cư');
+      } catch (err: unknown) {
+        const maybeError = err as {
+          message?: unknown;
+          response?: { data?: { message?: unknown } };
+        };
+
+        const messageText =
+          (typeof maybeError.response?.data?.message === 'string'
+            ? maybeError.response?.data?.message
+            : undefined) ??
+          (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+          'Không thể tải thông tin chung cư';
+
+        message.error(messageText);
       } finally {
         setLoading(false);
       }
@@ -43,6 +55,16 @@ const BuildingDetailPage = () => {
       >
         <Space>
           <Button onClick={() => navigate(-1)}>Quay lại</Button>
+          <Button
+            type="primary"
+            disabled={!building}
+            onClick={() => {
+              if (!building) return;
+              navigate(`/apartments?buildingId=${building.ID}`);
+            }}
+          >
+            Xem các căn hộ
+          </Button>
           <div>
             <Typography.Title level={3} style={{ margin: 0 }}>
               Chi tiết chung cư
@@ -94,4 +116,3 @@ const BuildingDetailPage = () => {
 };
 
 export default BuildingDetailPage;
-

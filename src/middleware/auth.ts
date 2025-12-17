@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import type { UserRole } from '../types/auth';
 import { AppError } from '../utils/appError';
 import { verifyToken } from '../utils/jwt';
+import { normalizeUserRole } from '../utils/roles';
 
 export const requireAuth: RequestHandler = (req, _res, next) => {
   const header = req.headers.authorization;
@@ -11,7 +12,7 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
 
   try {
     const payload = verifyToken(header.substring('Bearer '.length));
-    req.user = payload;
+    req.user = { ...payload, role: normalizeUserRole(payload.role) };
     return next();
   } catch {
     throw new AppError('Invalid or expired token', 401);

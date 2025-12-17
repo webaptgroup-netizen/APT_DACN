@@ -62,9 +62,16 @@ const DashboardPage = () => {
         complaints: complaints.data
       });
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load dashboard metrics', err);
-      const details = err?.response?.data?.message ?? err?.message ?? 'Không thể tải dữ liệu tổng quan.';
+      const maybeError = err as {
+        message?: unknown;
+        response?: { data?: { message?: unknown } };
+      };
+      const details =
+        (typeof maybeError.response?.data?.message === 'string' ? maybeError.response?.data?.message : undefined) ??
+        (typeof maybeError.message === 'string' ? maybeError.message : undefined) ??
+        'Không thể tải dữ liệu tổng quan.';
       setError(details);
       setStats(null);
       message.error('Không thể tải dữ liệu tổng quan, vui lòng thử lại.');
@@ -116,6 +123,7 @@ const DashboardPage = () => {
   if (!isManager) {
     return (
       <>
+        <VideoBackground />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <MarketingShowcase
             headline="Chào mừng bạn đến APT‑CONNECT!"
@@ -137,6 +145,7 @@ const DashboardPage = () => {
   if (loading) {
     return (
       <>
+        <VideoBackground />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Card 
             loading 
@@ -157,6 +166,7 @@ const DashboardPage = () => {
   if (error || !stats) {
     return (
       <>
+        <VideoBackground />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Card 
             style={{ 
@@ -242,6 +252,7 @@ const DashboardPage = () => {
 
   return (
     <>
+      <VideoBackground />
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Space direction="vertical" size={24} style={{ width: '100%' }}>
           <Card
