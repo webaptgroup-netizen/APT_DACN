@@ -49,18 +49,38 @@ export const createResident = async (payload: ResidentPayload) => {
     throw new AppError('User not found', 404);
   }
 
+  if (payload.LaChuHo) {
+    const { data: existingOwner, error: ownerError } = await supabase
+      .from(TABLE)
+      .select('ID')
+      .eq('ID_CanHo', payload.ID_CanHo)
+      .eq('LaChuHo', true)
+      .maybeSingle();
+
+    if (ownerError) {
+      throw new AppError('Failed to check existing owner', 500, ownerError);
+    }
+
+    if (existingOwner) {
+      throw new AppError('This apartment already has an owner', 400);
+    }
+  }
+
   const { data: existing, error: existingError } = await supabase
     .from(TABLE)
     .select('ID')
     .eq('ID_NguoiDung', payload.ID_NguoiDung)
+    .eq('ID_CanHo', payload.ID_CanHo)
+    .eq('ID_ChungCu', payload.ID_ChungCu)
+    .limit(1)
     .maybeSingle();
 
   if (existingError) {
-    throw new AppError('Unable to verify existing resident', 500, existingError);
+    throw new AppError('Unable to verify existing resident mapping', 500, existingError);
   }
 
   if (existing) {
-    throw new AppError('User already mapped to a resident record', 400);
+    throw new AppError('User already mapped to this apartment', 400);
   }
 
   const { data, error } = await supabase
@@ -73,6 +93,18 @@ export const createResident = async (payload: ResidentPayload) => {
     .single();
 
   if (error) {
+    const maybeError = error as any;
+    if (maybeError?.code === '23505') {
+      const constraint = String(maybeError?.message ?? '');
+      if (constraint.includes('UQ_CuDans_User')) {
+        throw new AppError(
+          'Database still enforces 1 apartment per user. Please drop constraint UQ_CuDans_User to allow multiple apartments.',
+          409,
+          error
+        );
+      }
+      throw new AppError('User already mapped (duplicate)', 409, error);
+    }
     throw new AppError('Failed to create resident', 500, error);
   }
 
@@ -127,17 +159,16 @@ export const removeResident = async (residentId: number) => {
     console.warn('Failed to remove resident from building chat', err);
   }
 
-  const { data: stillResident, error: checkError } = await supabase
+  const { count, error: checkError } = await supabase
     .from(TABLE)
-    .select('ID')
-    .eq('ID_NguoiDung', data.ID_NguoiDung)
-    .maybeSingle();
+    .select('ID', { count: 'exact', head: true })
+    .eq('ID_NguoiDung', data.ID_NguoiDung);
 
   if (checkError) {
     throw new AppError('Failed to verify resident role', 500, checkError);
   }
 
-  if (!stillResident) {
+  if (!count) {
     await elevateRole(data.ID_NguoiDung, 'Khach');
   }
 };

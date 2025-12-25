@@ -82,6 +82,18 @@ create table if not exists "CuDans" (
   constraint "IX_CanHos_MaCan_ID_ChungCu" unique ("MaCan","ID_ChungCu")
 );
 
+-- Allow one user to be linked to multiple apartments/buildings.
+-- Some deployments may have a legacy unique constraint on ID_NguoiDung (e.g. UQ_CuDans_User); drop it if present.
+alter table "CuDans" drop constraint if exists "UQ_CuDans_User";
+
+-- Prevent duplicate mappings for the same user + apartment.
+do $$
+begin
+  alter table "CuDans" add constraint "UQ_CuDans_User_Apartment" unique ("ID_NguoiDung","ID_CanHo");
+exception
+  when duplicate_object then null;
+end $$;
+
 create table if not exists "DichVus" (
   "ID" bigserial primary key,
   "TenDichVu" text not null,

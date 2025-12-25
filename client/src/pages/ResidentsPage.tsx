@@ -21,6 +21,13 @@ import api from '../api/client';
 import type { Apartment, Building, Resident, UserSummary } from '../types';
 import { useAuthStore } from '../store/useAuthStore';
 
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
 const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === 'string' && error.trim()) return error;
 
@@ -48,6 +55,7 @@ const ResidentsPage = () => {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [residentMappings, setResidentMappings] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(false);
   const [referencesLoading, setReferencesLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -84,14 +92,16 @@ const ResidentsPage = () => {
     const loadReferences = async () => {
       setReferencesLoading(true);
       try {
-        const [buildingRes, apartmentRes, userRes] = await Promise.all([
+        const [buildingRes, apartmentRes, userRes, residentRes] = await Promise.all([
           api.get('/buildings'),
           api.get('/apartments'),
-          api.get('/auth/users')
+          api.get('/auth/users'),
+          api.get('/residents')
         ]);
         setBuildings(buildingRes.data);
         setApartments(apartmentRes.data);
         setUsers(userRes.data);
+        setResidentMappings(residentRes.data);
       } catch (err: unknown) {
         message.error(getApiErrorMessage(err, 'Không thể tải dữ liệu tham chiếu'));
       } finally {
@@ -123,26 +133,64 @@ const ResidentsPage = () => {
   }, [apartments, selectedBuilding]);
 
   const availableUsers = useMemo(() => {
-    const assigned = new Set(residents.map((resident) => resident.ID_NguoiDung));
     return users
-      .filter((u) => !assigned.has(u.ID))
       .map((u) => ({
-        label: `${u.HoTen} (${u.Email})`,
+        label: `${u.HoTen} (${u.Email})${
+          residents.some((resident) => resident.ID_NguoiDung === u.ID)
+            ? ` · đã có ${residents.filter((resident) => resident.ID_NguoiDung === u.ID).length} căn`
+            : ''
+        }`,
         value: u.ID
       }));
   }, [residents, users]);
+  void availableUsers;
+
+  const userOptions = useMemo(() => {
+    const countByUser = new Map<number, number>();
+    residentMappings.forEach((resident) => {
+      countByUser.set(resident.ID_NguoiDung, (countByUser.get(resident.ID_NguoiDung) ?? 0) + 1);
+    });
+
+    return users.map((u) => ({
+      value: u.ID,
+      label: (
+        <Space size={8}>
+          <span>
+            {u.HoTen} ({u.Email})
+          </span>
+          {countByUser.get(u.ID) ? <Tag color="blue">Da co {countByUser.get(u.ID)} can</Tag> : null}
+        </Space>
+      ),
+      searchText: `${u.HoTen} ${u.Email}`
+    }));
+  }, [residentMappings, users]);
+
+  const filterUserOption = (input: string, option?: { searchText?: string }) => {
+    const haystack = normalizeText(option?.searchText ?? '');
+    const needle = normalizeText(input);
+    return haystack.includes(needle);
+  };
+
+  const refreshResidentMappings = useCallback(async () => {
+    try {
+      const { data } = await api.get('/residents');
+      setResidentMappings(data);
+    } catch (err: unknown) {
+      console.warn('Failed to refresh resident mappings', err);
+    }
+  }, []);
 
   const handleOwnerToggle = useCallback(
     async (resident: Resident, isOwner: boolean) => {
       try {
         await api.post(`/residents/${resident.ID}/owner`, { isOwner });
         message.success(isOwner ? 'Đã đánh dấu chủ hộ' : 'Đã bỏ trạng thái chủ hộ');
-        await loadResidents(filters.buildingId);
+        await Promise.all([loadResidents(filters.buildingId), refreshResidentMappings()]);
       } catch (err: unknown) {
         message.error(getApiErrorMessage(err, 'Không thể cập nhật chủ hộ'));
       }
     },
-    [filters.buildingId, loadResidents, message]
+    [filters.buildingId, loadResidents, message, refreshResidentMappings]
   );
 
   const handleDelete = useCallback(
@@ -150,12 +198,12 @@ const ResidentsPage = () => {
       try {
         await api.delete(`/residents/${resident.ID}`);
         message.success('Đã xóa cư dân khỏi căn hộ');
-        await loadResidents(filters.buildingId);
+        await Promise.all([loadResidents(filters.buildingId), refreshResidentMappings()]);
       } catch (err: unknown) {
         message.error(getApiErrorMessage(err, 'Không thể xóa cư dân'));
       }
     },
-    [filters.buildingId, loadResidents, message]
+    [filters.buildingId, loadResidents, message, refreshResidentMappings]
   );
 
   const openModal = () => {
@@ -176,7 +224,7 @@ const ResidentsPage = () => {
       });
       message.success('Đã gán cư dân cho căn hộ');
       setModalOpen(false);
-      await loadResidents(filters.buildingId);
+      await Promise.all([loadResidents(filters.buildingId), refreshResidentMappings()]);
     } catch (err: unknown) {
       message.error(getApiErrorMessage(err, 'Không thể gán cư dân'));
     } finally {
@@ -356,8 +404,8 @@ const ResidentsPage = () => {
             <Select
               showSearch
               placeholder="Chọn cư dân"
-              options={availableUsers}
-              optionFilterProp="label"
+              options={userOptions as any}
+              filterOption={filterUserOption as any}
               loading={referencesLoading}
             />
           </Form.Item>

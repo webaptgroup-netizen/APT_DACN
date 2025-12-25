@@ -220,6 +220,47 @@ const MyApartmentsPage = () => {
                               ))}
                             </Row>
                           )}
+
+                          {selected.apartment.Model3DUrl && (
+                            <Card
+                              size="small"
+                              title="Mô hình 3D (Momento360)"
+                              style={{ borderRadius: 12, background: 'rgba(255,255,255,0.6)' }}
+                              extra={
+                                <Button size="small" onClick={() => window.open(selected.apartment.Model3DUrl, '_blank')}>
+                                  Mở toàn màn hình
+                                </Button>
+                              }
+                            >
+                              <div
+                                style={{
+                                  position: 'relative',
+                                  width: '100%',
+                                  aspectRatio: '16 / 9',
+                                  minHeight: 420,
+                                  borderRadius: 10,
+                                  overflow: 'hidden',
+                                  background: '#000'
+                                }}
+                              >
+                                <iframe
+                                  src={selected.apartment.Model3DUrl}
+                                  style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    border: '0'
+                                  }}
+                                  allowFullScreen
+                                  allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope"
+                                  loading="lazy"
+                                  title="Apartment 3D view"
+                                />
+                              </div>
+                            </Card>
+                          )}
                         </>
                       )}
                     </Space>

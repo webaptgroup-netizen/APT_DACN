@@ -235,11 +235,10 @@ export const getOwnerApartment = async (userId: number) => {
 
 export const updateOwnerApartment = async (userId: number, payload: OwnerApartmentPayload) => {
   const apartmentId = await getOwnerApartmentId(userId);
-  const allowedPayload: OwnerApartmentPayload = {
-    MoTa: payload.MoTa,
-    Model3DUrl: payload.Model3DUrl,
-    URLs: payload.URLs
-  };
+  const allowedPayload: OwnerApartmentPayload = {};
+  if (payload.MoTa !== undefined) allowedPayload.MoTa = payload.MoTa;
+  if (payload.Model3DUrl !== undefined) allowedPayload.Model3DUrl = payload.Model3DUrl;
+  if (payload.URLs !== undefined) allowedPayload.URLs = payload.URLs;
 
   const updated = await updateApartment(apartmentId, allowedPayload);
   return attachModel3DUrl(updated);
@@ -306,20 +305,22 @@ export const listUserApartments = async (userId: number): Promise<UserApartmentS
         | { HoTen?: unknown; Email?: unknown; SoDienThoai?: unknown }
         | undefined;
 
-      return {
+      const summary: UserApartmentSummary = {
         apartment,
         residentsCount,
         isOwner,
-        owner:
-          ownerUser && typeof ownerUser.HoTen === 'string' && typeof ownerUser.Email === 'string'
-            ? {
-                hoTen: ownerUser.HoTen,
-                email: ownerUser.Email,
-                soDienThoai: typeof ownerUser.SoDienThoai === 'string' ? ownerUser.SoDienThoai : undefined
-              }
-            : undefined,
         residents
       };
+
+      if (ownerUser && typeof ownerUser.HoTen === 'string' && typeof ownerUser.Email === 'string') {
+        summary.owner = {
+          hoTen: ownerUser.HoTen,
+          email: ownerUser.Email,
+          ...(typeof ownerUser.SoDienThoai === 'string' ? { soDienThoai: ownerUser.SoDienThoai } : {})
+        };
+      }
+
+      return summary;
     })
   );
 
@@ -347,11 +348,10 @@ export const updateUserApartmentAsOwner = async (
     throw new AppError('Bạn không phải chủ hộ', 403);
   }
 
-  const allowedPayload: OwnerApartmentPayload = {
-    MoTa: payload.MoTa,
-    Model3DUrl: payload.Model3DUrl,
-    URLs: payload.URLs
-  };
+  const allowedPayload: OwnerApartmentPayload = {};
+  if (payload.MoTa !== undefined) allowedPayload.MoTa = payload.MoTa;
+  if (payload.Model3DUrl !== undefined) allowedPayload.Model3DUrl = payload.Model3DUrl;
+  if (payload.URLs !== undefined) allowedPayload.URLs = payload.URLs;
 
   const updated = await updateApartment(apartmentId, allowedPayload);
   return attachModel3DUrl(updated);
