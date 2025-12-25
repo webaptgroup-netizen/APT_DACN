@@ -99,7 +99,8 @@ export const ensureBuildingChat = async (buildingId: number) => {
 };
 
 export const addResidentToBuildingChat = async (userId: number, buildingId: number) => {
-  const chat = await ensureBuildingChatInternal(buildingId);
+  // Ensure managers are also added to the building room.
+  const chat = await ensureBuildingChat(buildingId);
 
   const { error } = await supabase
     .from(MEMBER_TABLE)
@@ -228,7 +229,7 @@ export const listUserChats = async (userId: number) => {
     return data ?? [];
   };
 
-  let chatIds = await loadMemberChatIds();
+  let chatIds: number[] = [];
 
   const { data: user, error: userError } = await supabase
     .from(USER_TABLE)
@@ -245,36 +246,38 @@ export const listUserChats = async (userId: number) => {
   }
 
   // Bootstrap nếu user chưa thuộc phòng nào
-  if (!chatIds.length) {
-    if (user.LoaiNguoiDung === 'Ban quan ly') {
-      const { data: buildings, error: buildingError } = await supabase.from(BUILDING_TABLE).select('ID');
+  // Bootstrap building chat membership based on residency/role.
+  // Note: CuDans can have multiple rows per user (multiple apartments).
+  if (user.LoaiNguoiDung === 'Ban quan ly') {
+    const { data: buildings, error: buildingError } = await supabase.from(BUILDING_TABLE).select('ID');
 
-      if (buildingError) {
-        throw new AppError('Failed to load buildings for chat bootstrap', 500, buildingError);
-      }
-
-      for (const b of buildings ?? []) {
-        await ensureBuildingChat((b as any).ID as number);
-      }
-    } else if (user.LoaiNguoiDung === 'Cu dan') {
-      const { data: resident, error: residentError } = await supabase
-        .from(RESIDENT_TABLE)
-        .select('ID_ChungCu')
-        .eq('ID_NguoiDung', userId)
-        .maybeSingle();
-
-      if (residentError) {
-        throw new AppError('Failed to load resident for chat bootstrap', 500, residentError);
-      }
-
-      if (resident?.ID_ChungCu) {
-        await addResidentToBuildingChat(userId, resident.ID_ChungCu as number);
-      }
+    if (buildingError) {
+      throw new AppError('Failed to load buildings for chat bootstrap', 500, buildingError);
     }
 
-    // Reload memberships sau bootstrap
-    chatIds = await loadMemberChatIds();
+    for (const b of buildings ?? []) {
+      await ensureBuildingChat((b as any).ID as number);
+    }
+  } else if (user.LoaiNguoiDung === 'Cu dan') {
+    const { data: residents, error: residentError } = await supabase
+      .from(RESIDENT_TABLE)
+      .select('ID_ChungCu')
+      .eq('ID_NguoiDung', userId);
+
+    if (residentError) {
+      throw new AppError('Failed to load resident mapping for chat bootstrap', 500, residentError);
+    }
+
+    const buildingIds = Array.from(
+      new Set((residents ?? []).map((r: any) => r.ID_ChungCu as number | null).filter((id) => typeof id === 'number'))
+    ) as number[];
+
+    for (const buildingId of buildingIds) {
+      await addResidentToBuildingChat(userId, buildingId);
+    }
   }
+
+  chatIds = await loadMemberChatIds();
 
   const chats = await loadChatsByIds(chatIds);
 
@@ -331,7 +334,7 @@ export const listUserChats = async (userId: number) => {
   let buildingName: string | undefined;
 
   if (user.LoaiNguoiDung === 'Cu dan') {
-    const { data: residentWithBuilding, error: residentBuildingError } = await supabase
+    const { data: residentWithBuildings, error: residentBuildingError } = await supabase
       .from(RESIDENT_TABLE)
       .select(
         `
@@ -341,15 +344,24 @@ export const listUserChats = async (userId: number) => {
         )
       `
       )
-      .eq('ID_NguoiDung', userId)
-      .maybeSingle();
+      .eq('ID_NguoiDung', userId);
 
     if (residentBuildingError) {
       throw new AppError('Failed to load resident building for chat display', 500, residentBuildingError);
     }
 
-    if (residentWithBuilding?.ChungCus) {
-      buildingName = (residentWithBuilding as any).ChungCus.Ten as string;
+    const names = Array.from(
+      new Set(
+        (residentWithBuildings ?? [])
+          .map((row: any) => (row?.ChungCus ? (row.ChungCus as any).Ten : undefined))
+          .filter((name: any) => typeof name === 'string' && name.trim().length)
+      )
+    ) as string[];
+
+    if (names.length === 1) {
+      buildingName = names[0];
+    } else if (names.length > 1) {
+      buildingName = 'Nhiều chung cư';
     }
   }
 
@@ -485,21 +497,32 @@ export const listResidentsInSameBuilding = async (userId: number) => {
       throw new AppError('Failed to load all residents', 500, error);
     }
 
-    return data ?? [];
+    const byUser = new Map<number, any>();
+    for (const row of data ?? []) {
+      const key = Number((row as any).ID_NguoiDung);
+      if (!Number.isNaN(key) && !byUser.has(key)) {
+        byUser.set(key, row);
+      }
+    }
+
+    return Array.from(byUser.values());
   }
 
   // Cư dân: chỉ xem cư dân trong cùng chung cư
-  const { data: resident, error: residentError } = await supabase
+  const { data: residentRows, error: residentError } = await supabase
     .from(RESIDENT_TABLE)
     .select('ID_ChungCu')
-    .eq('ID_NguoiDung', userId)
-    .maybeSingle();
+    .eq('ID_NguoiDung', userId);
 
   if (residentError) {
     throw new AppError('Failed to load resident building', 500, residentError);
   }
 
-  if (!resident) {
+  const buildingIds = Array.from(
+    new Set((residentRows ?? []).map((r: any) => r.ID_ChungCu as number | null).filter((id) => typeof id === 'number'))
+  ) as number[];
+
+  if (!buildingIds.length) {
     return [];
   }
 
@@ -522,13 +545,21 @@ export const listResidentsInSameBuilding = async (userId: number) => {
       )
     `
     )
-    .eq('ID_ChungCu', resident.ID_ChungCu)
+    .in('ID_ChungCu', buildingIds as any)
     .neq('ID_NguoiDung', userId);
 
   if (error) {
     throw new AppError('Failed to load building residents', 500, error);
   }
 
-  return data ?? [];
+  const byUser = new Map<number, any>();
+  for (const row of data ?? []) {
+    const key = Number((row as any).ID_NguoiDung);
+    if (!Number.isNaN(key) && !byUser.has(key)) {
+      byUser.set(key, row);
+    }
+  }
+
+  return Array.from(byUser.values());
 };
 

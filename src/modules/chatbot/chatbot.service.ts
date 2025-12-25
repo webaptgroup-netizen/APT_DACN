@@ -50,7 +50,7 @@ const buildContextForUser = async (user: { id: number; role: string }) => {
       total: complaintsRes.data?.length ?? 0
     };
   } else if (user.role === 'Cu dan') {
-    const { data: resident, error } = await supabase
+    const { data: residents, error } = await supabase
       .from('CuDans')
       .select(
         `
@@ -62,21 +62,36 @@ const buildContextForUser = async (user: { id: number; role: string }) => {
       `
       )
       .eq('ID_NguoiDung', user.id)
-      .maybeSingle();
+      .order('LaChuHo', { ascending: false })
+      .order('ID_CanHo', { ascending: true });
 
     if (error) {
       throw new AppError('Failed to load resident context', 500, error);
     }
 
-    context.residency = resident ?? null;
+    const residencyRows = (residents ?? []) as any[];
+    context.residencies = residencyRows;
+    context.residency = residencyRows[0] ?? null;
 
-    if (resident?.ID_CanHo) {
-      const { data: invoices } = await supabase
+    const apartmentIds = Array.from(
+      new Set(
+        residencyRows
+          .map((row) => row?.ID_CanHo as number | undefined)
+          .filter((id): id is number => typeof id === 'number' && id > 0)
+      )
+    );
+
+    if (apartmentIds.length) {
+      const { data: invoices, error: invoiceError } = await supabase
         .from('HoaDonDichVus')
-        .select('ID, SoTien, TrangThai, NgayLap')
-        .eq('ID_CanHo', resident.ID_CanHo)
+        .select('ID, ID_CanHo, SoTien, TrangThai, NgayLap')
+        .in('ID_CanHo', apartmentIds as any)
         .order('NgayLap', { ascending: false })
-        .limit(5);
+        .limit(10);
+
+      if (invoiceError) {
+        throw new AppError('Failed to load resident invoices for chatbot', 500, invoiceError);
+      }
 
       context.myInvoices = invoices ?? [];
     }
@@ -93,7 +108,16 @@ export const askChatbot = async (input: ChatbotInput, user: { id: number; role: 
     };
   }
 
-  const dbContext = await buildContextForUser(user);
+  let dbContext: Record<string, unknown>;
+  try {
+    dbContext = await buildContextForUser(user);
+  } catch (err: any) {
+    console.warn('Failed to build chatbot context', err?.details ?? err?.message ?? err);
+    return {
+      answer:
+        'Xin lỗi, hiện hệ thống không tải được dữ liệu chung cư để trả lời. Vui lòng thử lại sau hoặc liên hệ ban quản lý để kiểm tra dữ liệu cư dân/căn hộ.'
+    };
+  }
 
   const systemPrompt =
     'Bạn là chatbot trợ lý cho cư dân và ban quản lý chung cư APT-CONNECT. ' +

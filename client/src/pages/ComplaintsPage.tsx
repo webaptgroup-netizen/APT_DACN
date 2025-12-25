@@ -124,7 +124,7 @@ const ComplaintsPage = () => {
           </div>
 
           {/* Form gửi phản ánh */}
-          {user && (
+          {user && !isManager && (
             <Card 
               style={{ 
                 borderRadius: 20,

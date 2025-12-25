@@ -75,7 +75,14 @@ export const buildComplaintReplyPayload = async (input: {
   try {
     const [userRes, residentRes] = await Promise.all([
       supabase.from('NguoiDungs').select('HoTen, Email').eq('ID', complaint.ID_NguoiDung).maybeSingle(),
-      supabase.from('CuDans').select('ID_CanHo, ID_ChungCu').eq('ID_NguoiDung', complaint.ID_NguoiDung).maybeSingle()
+      supabase
+        .from('CuDans')
+        .select('ID, LaChuHo, ID_CanHo, ID_ChungCu')
+        .eq('ID_NguoiDung', complaint.ID_NguoiDung)
+        .order('LaChuHo', { ascending: false })
+        .order('ID', { ascending: false })
+        .limit(1)
+        .maybeSingle()
     ]);
 
     const email = (userRes.data as any)?.Email as string | undefined;

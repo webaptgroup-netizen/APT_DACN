@@ -49,6 +49,8 @@ const ChatPanel = () => {
     [chats, activeChatId]
   );
 
+  const isChatbotTab = activeTab === 'chatbot';
+
   useEffect(() => {
     if (!open || !token) return;
     void loadChats();
@@ -510,8 +512,8 @@ const ChatPanel = () => {
                   key: 'chatbot',
                   label: '🤖 Chatbot',
                   children: (
-                    <div style={{ height: '100%', minHeight: 420 }}>
-                      <ChatbotWidget />
+                    <div style={{ padding: 12, color: '#6b7280' }}>
+                      Chatbot hiển thị ở khung bên phải.
                     </div>
                   )
                 }
@@ -532,23 +534,30 @@ const ChatPanel = () => {
             <div
               style={{
                 flex: 1,
-                overflowY: 'auto',
-                padding: '12px 8px'
+                overflow: 'hidden',
+                padding: isChatbotTab ? 16 : '12px 8px'
               }}
             >
-              {renderMessages()}
+              {isChatbotTab ? (
+                <div style={{ height: '100%', overflow: 'hidden' }}>
+                  <ChatbotWidget />
+                </div>
+              ) : (
+                <div style={{ height: '100%', overflowY: 'auto' }}>{renderMessages()}</div>
+              )}
             </div>
 
             {/* Input */}
-            <div
-              style={{
-                padding: 16,
-                background: '#fff',
-                borderTop: '2px solid #e9ecef',
-                boxShadow: '0 -2px 8px rgba(0,0,0,0.05)'
-              }}
-            >
-              <div style={{ display: 'flex', gap: 12 }}>
+            {!isChatbotTab && (
+              <div
+                style={{
+                  padding: 16,
+                  background: '#fff',
+                  borderTop: '2px solid #e9ecef',
+                  boxShadow: '0 -2px 8px rgba(0,0,0,0.05)'
+                }}
+              >
+                <div style={{ display: 'flex', gap: 12 }}>
                 <Input.TextArea
                   rows={2}
                   placeholder={
@@ -592,8 +601,9 @@ const ChatPanel = () => {
                 >
                   Gửi
                 </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </Drawer>

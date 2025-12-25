@@ -407,7 +407,14 @@ export const elevateRole = async (userId: number, role: UserRole) => {
 };
 
 export const getResidentInfo = async (userId: number) => {
-  const { data, error } = await supabase.from(RESIDENT_TABLE).select('*').eq('ID_NguoiDung', userId).maybeSingle();
+  const { data, error } = await supabase
+    .from(RESIDENT_TABLE)
+    .select('*')
+    .eq('ID_NguoiDung', userId)
+    .order('LaChuHo', { ascending: false })
+    .order('ID', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     throw new AppError('Failed to load resident info', 500, error);

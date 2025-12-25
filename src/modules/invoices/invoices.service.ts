@@ -32,24 +32,31 @@ export const listInvoices = async (filters?: { buildingId?: number }) => {
 };
 
 export const listInvoicesForResident = async (userId: number) => {
-  const { data: resident, error: residentError } = await supabase
+  const { data: residentRows, error: residentError } = await supabase
     .from(RESIDENT_TABLE)
     .select('ID_CanHo')
-    .eq('ID_NguoiDung', userId)
-    .maybeSingle();
+    .eq('ID_NguoiDung', userId);
 
   if (residentError) {
     throw new AppError('Failed to load resident profile', 500, residentError);
   }
 
-  if (!resident) {
+  const apartmentIds = Array.from(
+    new Set(
+      (residentRows ?? [])
+        .map((row: any) => row?.ID_CanHo as number | undefined)
+        .filter((id): id is number => typeof id === 'number' && id > 0)
+    )
+  );
+
+  if (!apartmentIds.length) {
     return [];
   }
 
   const { data, error } = await supabase
     .from(INVOICE_TABLE)
     .select(baseSelect)
-    .eq('ID_CanHo', resident.ID_CanHo)
+    .in('ID_CanHo', apartmentIds as any)
     .order('NgayLap', { ascending: false });
 
   if (error) {

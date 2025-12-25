@@ -85,6 +85,11 @@ create table if not exists "CuDans" (
 -- Allow one user to be linked to multiple apartments/buildings.
 -- Some deployments may have a legacy unique constraint on ID_NguoiDung (e.g. UQ_CuDans_User); drop it if present.
 alter table "CuDans" drop constraint if exists "UQ_CuDans_User";
+-- Also handle the same constraint created without quotes (Postgres folds to lowercase).
+alter table "CuDans" drop constraint if exists UQ_CuDans_User;
+-- If a legacy unique index exists instead of a constraint, drop it too.
+drop index if exists "UQ_CuDans_User";
+drop index if exists UQ_CuDans_User;
 
 -- Prevent duplicate mappings for the same user + apartment.
 do $$

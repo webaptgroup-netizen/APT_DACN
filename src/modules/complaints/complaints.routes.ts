@@ -26,6 +26,7 @@ const createSchema = z.object({
 router.post(
   '/',
   requireAuth,
+  requireRoles('Cu dan'),
   validateRequest(createSchema),
   asyncHandler(async (req, res) => {
     const item = await createComplaint(req.user!.id, req.body);

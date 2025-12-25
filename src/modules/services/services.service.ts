@@ -50,6 +50,9 @@ const getResidentByUser = async (userId: number) => {
     .from(RESIDENT_TABLE)
     .select('ID, ID_CanHo, ID_ChungCu')
     .eq('ID_NguoiDung', userId)
+    .order('LaChuHo', { ascending: false })
+    .order('ID', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
